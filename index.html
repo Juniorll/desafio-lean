@@ -932,8 +932,10 @@
                 addCheatListeners(); // Ativa anti-cheat
             } catch (error) {
                  console.error(`Erro ao configurar o Desafio ${module.id}:`, error);
-                 alert(`Ocorreu um erro ao carregar o Desafio ${module.id}. Voltando ao início.`); // Usa alert como fallback extremo
-                 goHome();
+                 // Tenta mostrar uma mensagem de erro mais amigável
+                 ui.challengeFeedback.textContent = `Erro ao carregar o desafio ${module.id}. Por favor, volte ao início.`;
+                 ui.submitChallengeBtn.classList.add('hidden'); // Esconde botão de submeter
+                 // Não chama goHome() automaticamente, permite ao usuário ver a mensagem
             }
         }
 
@@ -957,9 +959,10 @@
             }
 
             const nextModuleIndex = currentModuleIndex + 1;
-            const isEndOfJourney = nextModuleIndex >= gameState.activeModules.length;
+            // Verifica se activeModules é um array antes de acessar length
+            const isEndOfJourney = !Array.isArray(gameState.activeModules) || nextModuleIndex >= gameState.activeModules.length;
 
-            if (!isEndOfJourney) {
+            if (!isEndOfJourney && gameState.activeModules[nextModuleIndex]) { // Verifica se próximo módulo existe
                 // Prepara para o próximo módulo
                 gameState.activeModules[nextModuleIndex].status = 'current';
                 ui.nextModuleBtn.textContent = "Voltar para a Jornada";
@@ -968,12 +971,17 @@
                     showScreen('journey');
                 };
             } else {
-                // [CORREÇÃO PONTUAÇÃO FINAL] Salva a pontuação total da jornada atual
+                // É o fim da jornada
+                // [CORREÇÃO PONTUAÇÃO FINAL] Salva a pontuação total da jornada atual AQUI
                 const journeyTitleText = ui.journeyTitle.textContent || "";
                  if (journeyTitleText.includes("Pizzaria")) {
                      gameState.totalScorePizzaria = gameState.totalScore;
+                     console.log("Pontuação final Pizzaria salva:", gameState.totalScorePizzaria); // Log para depuração
                  } else if (journeyTitleText.includes("Oficina")) {
                      gameState.totalScoreOficina = gameState.totalScore;
+                     console.log("Pontuação final Oficina salva:", gameState.totalScoreOficina); // Log para depuração
+                 } else {
+                      console.warn("Não foi possível identificar a jornada para salvar a pontuação final.");
                  }
                 // Prepara para a tela final
                 ui.nextModuleBtn.textContent = "Ver Pontuação Final";
@@ -990,18 +998,20 @@
             ui.finalPlayerName.textContent = `Iniciado: ${gameState.playerName}`;
             ui.finalCheats.textContent = gameState.cheatAttempts > 0 ? `Tentativas de trapaça detectadas: ${gameState.cheatAttempts}` : '';
 
-            // [CORREÇÃO PONTUAÇÃO FINAL] Apenas exibe as pontuações já salvas
+            // [CORREÇÃO PONTUAÇÃO FINAL] Lógica simplificada para exibir scores
             ui.finalScoresArea.innerHTML = '';
             let scoresDisplayed = false;
 
-            if (gameState.totalScorePizzaria !== 0) { // Mostra se for diferente de zero
+            // Mostra a pontuação da Pizzaria se ela for diferente de zero
+            if (typeof gameState.totalScorePizzaria === 'number' && gameState.totalScorePizzaria !== 0) { 
                  ui.finalScoresArea.innerHTML += `
                     <p class="text-lg text-gray-400">Pontuação (Pizzaria):</p>
                     <p class="text-4xl font-black text-yellow-400 mb-4">${gameState.totalScorePizzaria}</p>
                 `;
                  scoresDisplayed = true;
             }
-             if (gameState.totalScoreOficina !== 0) { // Mostra se for diferente de zero
+             // Mostra a pontuação da Oficina se ela for diferente de zero
+             if (typeof gameState.totalScoreOficina === 'number' && gameState.totalScoreOficina !== 0) { 
                  ui.finalScoresArea.innerHTML += `
                     <p class="text-lg text-gray-400">Pontuação (Oficina):</p>
                     <p class="text-4xl font-black text-yellow-400">${gameState.totalScoreOficina}</p>
@@ -1009,18 +1019,19 @@
                  scoresDisplayed = true;
             }
             
-             if (!scoresDisplayed) { // Mensagem se nenhuma pontuação foi salva ainda
+             // Mensagem se NENHUMA pontuação foi salva (ambas são 0)
+             if (!scoresDisplayed) { 
                 ui.finalScoresArea.innerHTML = `<p class="text-lg text-gray-400">Nenhuma jornada concluída ainda.</p>`;
             }
             
-            // Determina o título baseado em qual jornada foi a *última* concluída (opcional)
-            const lastJourneyTitle = ui.journeyTitle.textContent || "";
+            // Título baseado na *última* jornada concluída (a que acabou de salvar a pontuação)
+            const lastJourneyTitle = ui.journeyTitle.textContent || ""; // Usa o título da jornada anterior
              if (lastJourneyTitle.includes("Pizzaria")) {
                 ui.finalTitle.textContent = "Jornada 1 Concluída!";
             } else if (lastJourneyTitle.includes("Oficina")) {
                 ui.finalTitle.textContent = "Jornada 2 Concluída!";
             } else {
-                 ui.finalTitle.textContent = "Jornada Concluída!"; 
+                 ui.finalTitle.textContent = "Jornada Concluída!"; // Fallback
             }
             
             showScreen('final');
@@ -1042,12 +1053,11 @@
                     const options = ui.challengeArea.querySelectorAll('.option-item');
                     const { correct, wrong } = checkMultiSelect(options, 'isValue');
                     
-                    // Zera a pontuação do desafio antes de calcular a nova
-                    gameState.challengeScore = 0; 
+                    gameState.challengeScore = 0; // Zera ANTES de calcular
                     const points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
-                    updateScore(points); // Atualiza total e challengeScore
+                    updateScore(points); 
                     
-                    ui.submitChallengeBtn.classList.add('hidden', 'disabled'); // Desabilita também
+                    ui.submitChallengeBtn.classList.add('hidden', 'disabled'); 
                     const message = `Você acertou ${correct} e errou ${wrong}. Lembre-se: Valor é só o que o cliente pagaria!`;
                      setTimeout(() => showResult(true, message), 2000);
                 } catch (error) {
@@ -1083,7 +1093,8 @@
             allQuestions.forEach((item, index) => {
                  if (item && typeof item.q === 'string') {
                     const questionEl = document.createElement('div');
-                    questionEl.className = 'bg-gray-700 p-4 rounded-lg border border-gray-600';
+                    // Adiciona a classe challenge-question
+                    questionEl.className = 'challenge-question bg-gray-700 p-4 rounded-lg border border-gray-600'; 
                     let optionsHTML = '';
                     tiposMuda.forEach(tipo => {
                             optionsHTML += `
@@ -1097,7 +1108,7 @@
                         <p class="font-semibold mb-2"><span class="text-cyan-300">${item.context || ''}</span> ${item.q}</p>
                         <div>${optionsHTML}</div>
                     `;
-                    questionEl.dataset.answer = item.a; 
+                    questionEl.dataset.answer = item.a; // Guarda a resposta correta
                     ui.challengeArea.appendChild(questionEl);
                 } else {
                     console.warn("Item inválido encontrado no Desafio 2:", item);
@@ -1105,7 +1116,7 @@
             });
             
             ui.submitChallengeBtn.onclick = () => {
-                ui.submitChallengeBtn.classList.add('disabled'); // Desabilita ao clicar
+                ui.submitChallengeBtn.classList.add('disabled'); 
                 submitChallengeRadio(module);
             }
         }
@@ -1119,7 +1130,7 @@
         function runChallenge3Step(step, module) {
             ui.challengeArea.innerHTML = '';
             ui.challengeFeedback.textContent = '';
-            ui.submitChallengeBtn.classList.remove('hidden', 'disabled'); // Habilita o botão
+            ui.submitChallengeBtn.classList.remove('hidden', 'disabled'); 
             
             const challengeData = module.challengeData || {};
 
@@ -1136,7 +1147,7 @@
                         const options = ui.challengeArea.querySelectorAll('.option-item');
                         const { correct, wrong } = checkMultiSelect(options, 'isUseless');
                         const points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
-                        updateScore(points); // Acumula pontos da etapa
+                        updateScore(points); 
                         
                         ui.challengeFeedback.textContent = `Seiri: ${correct} itens inúteis identificados!`;
                         ui.submitChallengeBtn.classList.add('hidden', 'disabled'); 
@@ -1162,7 +1173,7 @@
                         const options = ui.challengeArea.querySelectorAll('.option-item');
                         const { correct, wrong } = checkMultiSelect(options, 'isWrongPlace');
                         const points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
-                        updateScore(points); // Acumula pontos da etapa
+                        updateScore(points); 
                         
                         ui.challengeFeedback.textContent = `Seiton: ${correct} itens no lugar errado identificados!`;
                         ui.submitChallengeBtn.classList.add('hidden', 'disabled'); 
@@ -1186,8 +1197,7 @@
                 });
 
                 ui.submitChallengeBtn.onclick = () => {
-                     ui.submitChallengeBtn.classList.add('disabled'); // Desabilita ao clicar
-                     // Esta chamada já acumula os pontos da etapa 3 e mostra o resultado final
+                     ui.submitChallengeBtn.classList.add('disabled'); 
                     submitChallengeRadio(module); 
                 };
             }
@@ -1201,14 +1211,13 @@
         function runChallenge4Step(step, module) {
             ui.challengeArea.innerHTML = '';
             ui.challengeFeedback.textContent = '';
-            ui.submitChallengeBtn.classList.remove('hidden', 'disabled'); // Habilita botão
+            ui.submitChallengeBtn.classList.remove('hidden', 'disabled'); 
             const isPizzaria = module.challengeTitle.includes("Pizzaria"); 
             const challengeData = module.challengeData || {};
 
             if (step === 1) { // Etapa 1: Kanban
                 ui.challengeTask.textContent = "Etapa 1: KANBAN (Gestão Visual).";
                 let kanbanHTML = '';
-                // Kanban HTML (código original mantido)
                  if (isPizzaria) {
                     kanbanHTML = `
                         <div class="kanban-board mb-4">
@@ -1226,12 +1235,13 @@
                             <div class="kanban-column"><div class="kanban-column-title">Em Conserto (WIP: 3)</div><div class="kanban-card">Carro I</div></div>
                         </div>`;
                 }
-                ui.challengeArea.innerHTML += kanbanHTML;
-
+                // Adiciona o HTML do Kanban primeiro
+                ui.challengeArea.innerHTML = kanbanHTML; 
 
                 const qData = challengeData.kanban;
                 if (qData) {
-                    const questionEl = createRadioQuestion(qData, 1, 'k', 'isBest');
+                    // Cria a pergunta e a adiciona DEPOIS do Kanban
+                    const questionEl = createRadioQuestion(qData, 1, 'k', 'isBest'); 
                     ui.challengeArea.appendChild(questionEl);
                 } else {
                      console.warn("Dados Kanban não encontrados para o Desafio 4.");
@@ -1243,12 +1253,14 @@
                         
                         if (total === 0 && !qData) { 
                              console.log("M4-S1: Sem dados Kanban, avançando para Poka-Yoke.");
+                             ui.submitChallengeBtn.classList.add('hidden', 'disabled');
                              setTimeout(() => runChallenge4Step(2, module), 500); 
                              return; 
                         }
                          if (total === 0 && qData) { 
                               console.error("M4-S1: Dados Kanban existem, mas checkRadioAnswers encontrou 0 perguntas.");
                              ui.challengeFeedback.textContent = "Erro ao verificar Kanban. Tentando avançar...";
+                             ui.submitChallengeBtn.classList.add('hidden', 'disabled');
                               setTimeout(() => runChallenge4Step(2, module), 1000);
                              return; 
                         }
@@ -1256,7 +1268,7 @@
                         let points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
                         if (correct > 0) points += 25; 
                         
-                        updateScore(points); // Acumula pontos da etapa
+                        updateScore(points); 
                         
                         ui.challengeFeedback.textContent = `Kanban: ${correct > 0 ? 'Gargalo identificado! (+25 pts Bônus)' : 'Não identificou o gargalo!'}`;
                         ui.submitChallengeBtn.classList.add('hidden', 'disabled');
@@ -1265,6 +1277,7 @@
                     } catch (error) {
                         console.error("Erro no onclick (Step 1 - Kanban):", error);
                         ui.challengeFeedback.textContent = "Ocorreu um erro. Tentando avançar...";
+                         ui.submitChallengeBtn.classList.add('hidden', 'disabled');
                         setTimeout(() => runChallenge4Step(2, module), 1000);
                     }
                 };
@@ -1281,8 +1294,7 @@
                 });
 
                 ui.submitChallengeBtn.onclick = () => {
-                    ui.submitChallengeBtn.classList.add('disabled'); // Desabilita ao clicar
-                    // Esta chamada já acumula os pontos da etapa 2 e mostra o resultado final
+                    ui.submitChallengeBtn.classList.add('disabled'); 
                     submitChallengeRadio(module); 
                 };
             }
@@ -1329,13 +1341,17 @@
             return { correct, wrong };
         }
 
+        /**
+         * Cria um bloco de pergunta de rádio, adicionando a classe 'challenge-question'.
+         */
         function createRadioQuestion(item, index, namePrefix, dataAttribute) {
              if (!item || !item.q || !item.options || !Array.isArray(item.options)) {
                 console.error("Dados inválidos para createRadioQuestion:", item);
                 return document.createElement('div'); 
             }
             const questionEl = document.createElement('div');
-            questionEl.className = 'bg-gray-700 p-4 rounded-lg border border-gray-600';
+            // Adiciona a classe 'challenge-question'
+            questionEl.className = 'challenge-question bg-gray-700 p-4 rounded-lg border border-gray-600'; 
             let optionsHTML = '';
             shuffleArray(item.options).forEach(opt => {
                  if (opt && typeof opt.text === 'string') { 
@@ -1353,7 +1369,8 @@
             });
             questionEl.innerHTML = `<p class="font-semibold mb-2">${item.q}</p><div>${optionsHTML}</div>`;
             if (dataAttribute === 'isBest') {
-                questionEl.dataset.isBest = 'true';
+                // Guarda o marcador 'isBest' para identificar a pergunta
+                questionEl.dataset.isBest = 'true'; 
             }
             return questionEl;
         }
@@ -1361,7 +1378,7 @@
         
         /**
          * Checa desafios de radio button (M2, M3.3, M4.1, M4.2)
-         * [CORREÇÃO] Itera pelos filhos da challengeArea para encontrar as perguntas.
+         * [CORREÇÃO] Usa querySelectorAll com a classe 'challenge-question'.
          */
         function checkRadioAnswers(module) {
             let correctSelections = 0;
@@ -1374,39 +1391,38 @@
                      return { correct: 0, wrong: 0, total: 0 };
                 }
 
-                // [CORREÇÃO APLICADA] Iterar pelos filhos em vez de usar querySelectorAll
-                const allChildren = ui.challengeArea.children;
-                questions = []; 
-                for (let i = 0; i < allChildren.length; i++) {
-                    const child = allChildren[i];
-                    if (child && child.dataset) { 
-                        const isM2Question = module.id === 2 && child.hasAttribute('data-answer');
-                        const isM3orM4Question = (module.id === 3 || module.id === 4) && child.hasAttribute('data-isBest') && child.dataset.isBest === 'true';
-
-                        if (isM2Question || isM3orM4Question) {
-                            questions.push(child);
-                        }
-                    }
-                }
+                // [CORREÇÃO APLICADA] Usa querySelectorAll com a classe específica
+                questions = ui.challengeArea.querySelectorAll('.challenge-question');
                 // Fim da [CORREÇÃO APLICADA]
 
                  if (!questions || questions.length === 0) {
-                     console.warn(`Nenhuma pergunta encontrada para M${module.id} iterando children.`);
+                     console.warn(`Nenhuma pergunta encontrada para M${module.id} com a classe 'challenge-question'.`);
                      return { correct: 0, wrong: 0, total: 0 };
                  }
 
                 questions.forEach((q, index) => {
+                    // Verifica se 'q' é um elemento válido e tem 'dataset'
+                    if (!q || !q.dataset) {
+                        console.warn("Elemento inválido encontrado ao verificar respostas:", q);
+                        return; // Pula este elemento
+                    }
+
                     const selectedInput = q.querySelector('input[type="radio"]:checked');
                      let correctAnswerValue = '';
                      let correctEl = null;
 
-                     if (module.id === 2) {
+                     if (module.id === 2 && q.hasAttribute('data-answer')) { // M2 usa data-answer
                          correctAnswerValue = q.dataset.answer;
                          correctEl = q.querySelector(`input[value="${CSS.escape(correctAnswerValue)}"]`);
-                    } else { // module 3 or 4
-                         correctAnswerValue = 'true';
+                    } else if ((module.id === 3 || module.id === 4) && q.hasAttribute('data-isBest')) { // M3/M4 usam data-isBest
+                         correctAnswerValue = 'true'; // A resposta correta tem valor 'true'
                          correctEl = q.querySelector(`input[value="true"]`);
+                    } else {
+                         // Se não for uma pergunta esperada (ex: Kanban div em M4), pula
+                         // console.log("Elemento pulado em checkRadioAnswers:", q);
+                         return; 
                     }
+
                      q.querySelectorAll('input[type="radio"]').forEach(inp => inp.disabled = true);
 
                      if (selectedInput) {
@@ -1427,7 +1443,15 @@
                  console.error(`Erro em checkRadioAnswers (M${module ? module.id : 'undefined'}):`, error);
              }
 
-            return { correct: correctSelections, wrong: wrongSelections, total: questions.length };
+            // Recalcula o total baseado nos elementos que são realmente perguntas
+            const actualQuestionCount = Array.from(ui.challengeArea.querySelectorAll('.challenge-question')).filter(q => {
+                 if (!q || !q.dataset) return false;
+                 return (module.id === 2 && q.hasAttribute('data-answer')) || 
+                        ((module.id === 3 || module.id === 4) && q.hasAttribute('data-isBest'));
+            }).length;
+
+
+            return { correct: correctSelections, wrong: wrongSelections, total: actualQuestionCount };
         }
 
 
@@ -1438,22 +1462,20 @@
              try { 
                 const { correct, wrong, total } = checkRadioAnswers(module);
                 
-                // Zera a pontuação *desta parte* do desafio antes de calcular a nova
-                // gameState.challengeScore = 0; // Não zera aqui, pois pode ser parte de um desafio multi-etapa
                 let points = 0; 
                  if (total > 0) {
-                     points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
-                     updateScore(points); // Acumula pontos da etapa/desafio
+                     // Calcula pontos apenas se houver perguntas válidas
+                     points = (correct * (module.pointsPerCorrect || 0)) + (wrong * (module.pointsPerWrong || 0));
+                     updateScore(points); 
                 } else {
                      console.warn(`submitChallengeRadio (M${module.id}): Nenhuma pergunta válida encontrada, pontuação não calculada.`);
                 }
                 
-                ui.submitChallengeBtn.classList.add('hidden', 'disabled'); // Desabilita também
+                ui.submitChallengeBtn.classList.add('hidden', 'disabled'); 
 
                 // [CORREÇÃO] Mensagem de feedback ajustada
                 const message = total > 0 ? `Você acertou ${correct} de ${total}!` : "Nenhuma pergunta encontrada neste desafio.";
                  
-                // Avança para a tela de resultado final do desafio
                 setTimeout(() => showResult(true, message), 4000); 
              } catch (error) {
                  console.error(`Erro em submitChallengeRadio (M${module ? module.id : 'undefined'}):`, error);
