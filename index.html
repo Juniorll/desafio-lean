@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Jornada LEAN: O Desafio do Gerente</title>
+    <!-- Carrega o Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carrega a fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Anti-Cheat: Desabilita seleção de texto */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* Classes auxiliares para mostrar/esconder telas */
+        .game-screen {
+            display: none; /* Todas as telas começam escondidas */
+        }
+        .game-screen.active {
+            display: block; /* A tela ativa é mostrada */
+        }
+
+        /* Estilo para itens de opção nos desafios */
+        .option-item {
+            transition: all 0.2s ease-in-out;
+        }
+        .option-item:hover:not(.disabled) {
+            transform: translateY(-4px);
+            background-color: #374151; /* gray-700 */
+            border-color: #06b6d4; /* cyan-500 */
+        }
+        .option-item.selected {
+            background-color: #0891b2; /* cyan-600 */
+            border-color: #06b6d4; /* cyan-500 */
+            color: white;
+        }
+        .option-item.correct {
+            background-color: #10B981 !important; /* green-500 */
+            border-color: #059669 !important;
+            color: white;
+        }
+        .option-item.wrong {
+            background-color: #EF4444 !important; /* red-500 */
+            border-color: #DC2626 !important;
+            color: white;
+        }
+        .option-item.disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        /* Estilos para o mapa da jornada */
+        .journey-module {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(80%);
+        }
+        .journey-module.current {
+            opacity: 1;
+            cursor: pointer;
+            filter: grayscale(0%);
+            border-color: #f59e0b; /* amber-500 */
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+        }
+        .journey-module.completed {
+            opacity: 1;
+            cursor: default;
+            filter: grayscale(0%);
+            border-color: #10B981; /* green-500 */
+            background-color: #1f2937; /* gray-800 */
+        }
+        .journey-module.completed .journey-status {
+            color: #10B981;
+            content: 'Concluído!';
+        }
+
+        /* Estilo para o Kanban */
+        .kanban-board {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+        }
+        .kanban-column {
+            min-width: 200px;
+            flex: 1;
+            background-color: #1f2937; /* gray-800 */
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+        }
+        .kanban-column-title {
+            font-weight: 700;
+            color: #e5e7eb; /* gray-200 */
+            border-bottom: 2px solid #374151; /* gray-700 */
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+            text-align: center;
+        }
+        .kanban-card {
+            background-color: #374151; /* gray-700 */
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .kanban-column.bottleneck {
+            border: 2px solid #EF4444; /* red-500 */
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4 md:p-8 flex items-center justify-center">
+
+    <!-- Container Principal do Jogo -->
+    <div class="w-full max-w-5xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 border border-gray-700">
+
+        <!-- Cabeçalho do Jogo (fixo) -->
+        <header class="flex justify-between items-center pb-4 border-b border-gray-700 mb-6">
+            <div>
+                <h1 class="text-xl md:text-3xl font-black text-cyan-400">A JORNADA LEAN</h1>
+                <p id="player-name-display" class="text-sm text-gray-400">Iniciado: (Nenhum)</p>
+            </div>
+            <div class="text-right">
+                <div class="text-lg md:text-2xl font-bold text-yellow-400">
+                    <span id="score-display">0</span> PONTOS
+                </div>
+            </div>
+        </header>
+
+        <!-- === TELA 1: BOAS-VINDAS === -->
+        <div id="welcome-screen" class="game-screen active">
+            <h2 class="text-2xl font-bold mb-4">Bem-vindo à sua Jornada LEAN!</h2>
+            <p class="text-gray-300 mb-4">
+                Você foi desafiado a se tornar um "Faixa-Branca" em LEAN. Sua missão é otimizar processos, começando com uma pizzaria caótica.
+            </p>
+            <p class="text-gray-300 mb-6">
+                Esta jornada tem 4 Módulos de aprendizado e desafios. Você terá cerca de 1h30 para completar tudo.
+            </p>
+            <div class="bg-red-900 border border-red-600 text-red-100 p-4 rounded-lg mb-6">
+                <h3 class="font-bold text-lg mb-2">ATENÇÃO, INICIADO! (ANTI-CHEAT ATIVO)</h3>
+                <p>
+                    Sua <span class="font-bold text-red-300">PONTUAÇÃO</span> é o seu resultado final. Respostas erradas <span class="font-bold text-red-300">descontam pontos</span>!
+                </p>
+                <p class="mt-2">
+                    O sistema detectará se você <span class="font-bold">sair desta tela, minimizar o navegador ou tentar capturar a tela</span> durante um desafio.
+                    Qualquer tentativa resultará em uma <span class="font-bold text-lg">penalidade de -150 PONTOS</span>. Jogue limpo!
+                </p>
+            </div>
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="player-name-input" placeholder="Digite seu nome para a classificação..." class="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                <button id="start-game-btn" class="bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg transition duration-300 shadow-lg">
+                    Começar minha Jornada!
+                </button>
+            </div>
+        </div>
+
+        <!-- === TELA 2: JORNADA (MAPA) === -->
+        <div id="journey-screen" class="game-screen">
+            <h2 class="text-2xl font-bold mb-6">Sua Jornada LEAN (Faixa-Branca)</h2>
+            <div id="journey-map" class="space-y-4">
+                <!-- Módulos serão injetados aqui pelo JS -->
+            </div>
+        </div>
+
+        <!-- === TELA 3: ESTUDO (APRENDIZADO) === -->
+        <div id="learn-screen" class="game-screen">
+            <h2 id="learn-title" class="text-3xl font-black mb-4 text-cyan-400"></h2>
+            <div id="learn-content" class="text-gray-300 space-y-4 max-h-[50vh] overflow-y-auto pr-4">
+                <!-- Conteúdo do Estudo será injetado aqui -->
+            </div>
+            <button id="start-challenge-btn" class="w-full mt-6 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg transition duration-300 shadow-lg">
+                Entendido! Ir para o Desafio!
+            </button>
+        </div>
+
+        <!-- === TELA 4: DESAFIO === -->
+        <div id="challenge-screen" class="game-screen">
+            <h2 id="challenge-title" class="text-2xl font-bold text-center mb-2 text-yellow-400"></h2>
+            <p id="challenge-task" class="text-gray-300 text-center mb-6"></p>
+            <div id="challenge-area" class="space-y-4">
+                <!-- Perguntas e Opções do Desafio serão injetadas aqui -->
+            </div>
+            <button id="submit-challenge-btn" class="w-full mt-6 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-300 shadow-lg">
+                Verificar Respostas
+            </button>
+            <div id="challenge-feedback" class="mt-4 text-center"></div>
+        </div>
+
+        <!-- === TELA 5: RESULTADO DO DESAFIO === -->
+        <div id="result-screen" class="game-screen text-center">
+            <h2 id="result-title" class="text-3xl font-bold mb-4"></h2>
+            <p id="result-message" class="text-lg text-gray-300 mb-6"></p>
+            <div class="bg-gray-700 rounded-lg p-6 w-full max-w-sm mx-auto mb-6">
+                <p class="text-sm text-gray-400">Pontuação do Desafio:</p>
+                <p id="result-score" class="text-4xl font-black text-yellow-400"></p>
+            </div>
+            <button id="next-module-btn" class="w-full max-w-sm mx-auto bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg transition duration-300 shadow-lg">
+                Voltar para a Jornada
+            </button>
+        </div>
+
+        <!-- === TELA 6: PONTUAÇÃO FINAL === -->
+        <div id="final-screen" class="game-screen text-center">
+            <h2 class="text-3xl font-black mb-4 text-cyan-400">Jornada Concluída!</h2>
+            <p id="final-player-name" class="text-xl font-semibold mb-4"></p>
+            <p class="text-lg text-gray-300 mb-6">
+                Parabéns! Você deu os primeiros passos para se tornar um mestre LEAN.
+                Sua pontuação final reflete seu raciocínio e atenção aos detalhes.
+            </p>
+            <div class="bg-gray-900 border-2 border-cyan-500 rounded-lg p-8 w-full max-w-md mx-auto mb-6 shadow-2xl">
+                <p class="text-lg text-gray-400">Pontuação Total:</p>
+                <p id="final-score" class="text-6xl font-black text-yellow-400"></p>
+                <p id="final-cheats" class="text-sm text-red-400 mt-2"></p>
+            </div>
+            <p class="text-sm text-gray-500">Atualize a página para jogar novamente.</p>
+        </div>
+
+    </div> <!-- Fim do Container Principal -->
+
+    <!-- === MODAL ANTI-CHEAT === -->
+    <div id="cheat-modal" class="game-screen fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="bg-red-800 border-4 border-red-500 rounded-lg p-8 shadow-2xl text-center max-w-lg">
+            <h2 class="text-3xl font-black text-white mb-4">COMPORTAMENTO SUSPEITO!</h2>
+            <p id="cheat-message" class="text-lg text-red-100 mb-6"></p>
+            <button id="cheat-ok-btn" class="bg-white text-red-800 font-bold py-3 px-8 rounded-lg text-lg">
+                Entendido...
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- ESTADO DO JOGO ---
+        const gameState = {
+            playerName: "",
+            totalScore: 0,
+            currentModuleId: 1,
+            challengeScore: 0,
+            cheatAttempts: 0,
+            isCheating: false, // Debounce para anti-cheat
+            modules: [
+                { 
+                    id: 1, 
+                    name: "Módulo 1: Fundamentos LEAN e o 'Valor'", 
+                    status: "locked", // 'locked', 'current', 'completed'
+                    learnTitle: "Módulo 1: O que é 'Valor'?",
+                    learnContent: `
+                        <p class="text-lg">Bem-vindo ao LEAN (Manufatura Enxuta). Pense no LEAN como uma filosofia para <span class="font-bold text-cyan-300">eliminar desperdícios</span> e focar apenas no que realmente importa.</p>
+                        <p>O conceito mais importante do LEAN é o <span class="font-bold text-white">VALOR</span>.</p>
+                        <p class="font-bold text-xl mt-4">Valor é qualquer coisa pela qual o CLIENTE está disposto a pagar.</p>
+                        <p>Se o cliente não paga por isso, provavelmente é um desperdício (em LEAN, chamamos de 'Muda').</p>
+                        <h4 class="text-lg font-bold mt-4 text-cyan-300">Exemplos na Pizzaria:</h4>
+                        <ul class="list-disc list-inside space-y-2 pl-4">
+                            <li>O cliente <span class="text-green-400 font-bold">PAGA</span> por:
+                                <ul class="list-disc list-inside pl-6">
+                                    <li>Ingredientes de qualidade.</li>
+                                    <li>Massa sendo aberta e montada.</li>
+                                    <li>Pizza assando no forno.</li>
+                                    <li>Entrega rápida e correta.</li>
+                                </ul>
+                            </li>
+                            <li>O cliente <span class="text-red-400 font-bold">NÃO PAGA</span> para:
+                                <ul class="list-disc list-inside pl-6">
+                                    <li>O pizzaiolo <span class="font-bold">procurar</span> o queijo na geladeira.</li>
+                                    <li>O gerente <span class="font-bold">refazer</span> uma pizza que saiu errada.</li>
+                                    <li>A pizza ficar <span class="font-bold">esperando</span> na prateleira o motoboy chegar.</li>
+                                    <li>O motoboy <span class="font-bold">caminhar</span> 50 metros para pegar a pizza.</li>
+                                </ul>
+                            </li>
+                        </ul>
+                        <p class="mt-4">No próximo desafio, seu trabalho é provar que você entendeu o que é 'Valor' do ponto de vista do cliente.</p>
+                    `,
+                    challengeTitle: "Desafio 1: O que é Valor?",
+                    challengeTask: "Selecione TODAS as atividades pelas quais um cliente de pizzaria estaria disposto a pagar. (Múltipla escolha)",
+                    challengeData: [
+                        { text: "Assar a pizza no forno.", isValue: true },
+                        { text: "O pizzaiolo andando até a geladeira.", isValue: false },
+                        { text: "Usar ingredientes frescos (queijo, tomate).", isValue: true },
+                        { text: "O motoboy esperando o pedido ficar pronto.", isValue: false },
+                        { text: "Dobrar a caixa de papelão para a pizza.", isValue: true },
+                        { text: "Refazer uma pizza que queimou.", isValue: false },
+                        { text: "A pizza parada na prateleira esfriando.", isValue: false },
+                        { text: "O pizzaiolo montando a pizza (molho, queijo, etc).", isValue: true },
+                        { text: "Procurar a comanda do pedido que sumiu.", isValue: false }
+                    ],
+                    pointsPerCorrect: 20,
+                    pointsPerWrong: -10
+                },
+                { 
+                    id: 2, 
+                    name: "Módulo 2: Os 7 Desperdícios (MUDA)", 
+                    status: "locked",
+                    learnTitle: "Módulo 2: O Vilão 'MUDA'",
+                    learnContent: `
+                        <p class="text-lg">Agora que você sabe o que é 'Valor', vamos caçar o vilão: <span class="font-bold text-red-400">MUDA (Desperdício)</span>.</p>
+                        <p>Existem 7 tipos clássicos de 'Muda'. Decore o acrônimo <span class="font-bold text-white">T.I.M. W.O.O.D.</span> (em inglês) ou S.T.O.M.P.E.D. (em português).</p>
+                        
+                        <h4 class="text-lg font-bold mt-4 text-cyan-300">Os 7 Desperdícios:</h4>
+                        <ul class="list-none space-y-3 pl-2">
+                            <li><span class="font-bold text-xl text-white">1. TRANSPORTE:</span>
+                                <p class="text-sm">Mover <span class="font-bold">produtos/materiais</span> de um lugar para outro. (Ex: Levar a massa do freezer até a bancada do outro lado da loja).</p>
+                            </li>
+                            <li><span class="font-bold text-xl text-white">2. INVENTÁRIO (Estoque):</span>
+                                <p class="text-sm">Mais material ou produto parado do que o necessário. (Ex: Comprar 1.000 caixas de pizza que ficarão paradas por 6 meses ocupando espaço).</p>
+                            </li>
+                            <li><span class="font-bold text-xl text-white">3. MOVIMENTAÇÃO:</span>
+                                <p class="text-sm">Mover <span class="font-bold">pessoas</span> ou equipamentos desnecessariamente. (Ex: O pizzaiolo ter que dar 5 passos para pegar o molho e 10 passos para pegar o queijo).</p>
+                            </li>
+                            <li><span class="font-bold text-xl text-white">4. WAITING (Espera):</span>
+                                <p class="text-sm">Pessoas ou máquinas paradas esperando o próximo passo. (Ex: Pizza pronta esperando o motoboy; Pizzaiolo parado esperando o forno esquentar).</p>
+                            </li>
+                            <li><span class="font-bold text-xl text-white">5. OVER-PRODUCTION (Superprodução):</span>
+                                <p class="text-sm">Produzir mais, mais rápido ou antes do necessário. (Ex: Fazer 20 pizzas de mussarela às 17h "só para adiantar", e elas estragarem).</p>
+                            </li>
+                            <li><span class="font-bold text-xl text-white">6. OVER-PROCESSING (Superprocessamento):</span>
+                                <p class="text-sm">Fazer mais trabalho do que o cliente valoriza. (Ex: Colocar a pizza em uma caixa, depois em uma sacola de plástico, depois em uma sacola de papel).</p>
+                            </li>
+                            <li><span class="font-bold text-xl text-white">7. DEFEITOS:</span>
+                                <p class="text-sm">Erros que exigem correção ou refazer o trabalho. (Ex: Pizza queimada; Enviar sabor errado; Endereço de entrega errado).</p>
+                            </li>
+                        </ul>
+                    `,
+                    challengeTitle: "Desafio 2: Caça aos Desperdícios",
+                    challengeTask: "Você tem dois desafios! Primeiro, na Pizzaria. Depois, em um Festival de Música. Classifique cada problema com seu 'Muda' (Desperdício) correspondente.",
+                    // Os dados do desafio 2 estão no JS (setupChallenge2)
+                    pointsPerCorrect: 15,
+                    pointsPerWrong: -5
+                },
+                { 
+                    id: 3, 
+                    name: "Módulo 3: Melhoria Contínua (Kaizen e 5S)", 
+                    status: "locked",
+                    learnTitle: "Módulo 3: As Ferramentas da Mudança",
+                    learnContent: `
+                        <p class="text-lg">Você já sabe identificar 'Valor' e 'Desperdício'. Agora, como arrumamos a casa? Com duas ferramentas: <span class="font-bold text-cyan-300">5S</span> e <span class="font-bold text-cyan-300">KAIZEN</span>.</p>
+                        
+                        <h4 class="text-lg font-bold mt-4 text-white">1. KAIZEN (Melhoria Contínua)</h4>
+                        <p>Kaizen significa "mudar para melhor". É a filosofia de que <span class="font-bold">pequenas melhorias, feitas todos os dias,</span> geram resultados gigantescos. Em vez de gastar R$ 50.000 num forno novo (o que não é Kaizen), o Kaizen pergunta: "O que podemos fazer HOJE, de graça ou quase de graça, para melhorar 1%?"</p>
+                        <p class="font-bold">Ex: "Vamos etiquetar as gavetas de ingredientes." (Pequena mudança, grande impacto na 'Movimentação').</p>
+                        
+                        <h4 class="text-lg font-bold mt-4 text-white">2. 5S (A Ferramenta de Organização)</h4>
+                        <p>O Kaizen mais fácil de começar é o 5S. É um método japonês para organizar o local de trabalho.</p>
+                        <ul class="list-none space-y-2 pl-2">
+                            <li><span class="font-bold text-xl text-white">1S. Seiri (Utilização):</span> <span class="text-sm">SEPARAR o útil do inútil. Jogue fora o que não usa.</span></li>
+                            <li><span class="font-bold text-xl text-white">2S. Seiton (Organização):</span> <span class="text-sm">COLOCAR cada coisa útil em seu devido lugar. "Um lugar para cada coisa, e cada coisa em seu lugar."</span></li>
+                            <li><span class="font-bold text-xl text-white">3S. Seiso (Limpeza):</span> <span class="text-sm">LIMPAR o local de trabalho.</span></li>
+                            <li><span class="font-bold text-xl text-white">4. Seiketsu (Padronização):</span> <span class="text-sm">CRIAR regras (visuais) para manter os 3S. (Ex: Etiquetar a gaveta "Colheres").</span></li>
+                            <li><span class="font-bold text-xl text-white">5S. Shitsuke (Disciplina):</span> <span class="text-sm">MANTER o hábito de seguir as regras.</span></li>
+                        </ul>
+                        <p class="mt-4">Seu desafio será aplicar o 5S e o Kaizen na nossa pizzaria.</p>
+                    `,
+                    challengeTitle: "Desafio 3: A Grande Arrumação",
+                    challengeTask: "Este desafio tem 3 etapas: Aplicar 'Seiri' (Descarte), 'Seiton' (Organização) e 'Kaizen' (Melhoria).",
+                    // Os dados do desafio 3 estão no JS (setupChallenge3)
+                    pointsPerCorrect: 10,
+                    pointsPerWrong: -5
+                },
+                { 
+                    id: 4, 
+                    name: "Módulo 4: Ferramentas de Controle (Kanban e Poka-Yoke)", 
+                    status: "locked",
+                    learnTitle: "Módulo 4: Controlando o Processo",
+                    learnContent: `
+                        <p class="text-lg">Você organizou a casa (5S) e sabe melhorar (Kaizen). Agora, vamos controlar o fluxo de trabalho com <span class="font-bold text-cyan-300">Kanban</span> e <span class="font-bold text-cyan-300">Poka-Yoke</span>.</p>
+                        
+                        <h4 class="text-lg font-bold mt-4 text-white">1. KANBAN (Gestão Visual)</h4>
+                        <p>Kanban é uma palavra japonesa que significa "cartão visual". É um sistema para <span class="font-bold">visualizar o trabalho, limitar o trabalho em progresso (WIP) e maximizar a eficiência</span>.</p>
+                        <p>Em vez de o pizzaiolo tentar fazer 10 pizzas ao mesmo tempo (o que gera caos), o Kanban sugere um limite. Por exemplo: "No máximo 3 pizzas na bancada de 'Preparo' ao mesmo tempo".</p>
+                        <p class="font-bold">Quando a coluna 'Preparo' está cheia (atingiu o limite de 3), o pizzaiolo <span class="text-red-400">NÃO DEVE</span> puxar um novo pedido da coluna 'A Fazer'. Ele deve, primeiro, ajudar a mover uma pizza de 'Preparo' para 'Assando', liberando espaço. Isso evita gargalos!</p>
+                        
+                        <h4 class="text-lg font-bold mt-4 text-white">2. POKA-YOKE (À Prova de Erros)</h4>
+                        <p>Poka-Yoke é qualquer mecanismo que ajuda a <span class="font-bold">prevenir que um erro humano aconteça</span>. O objetivo é tornar impossível fazer errado.</p>
+                        <ul class="list-disc list-inside space-y-2 pl-4">
+                            <li><span class="font-bold">Exemplo 1:</span> O conector USB-C. Você não consegue encaixar do lado errado. Isso é um Poka-Yoke físico.</li>
+                            <li><span class="font-bold">Exemplo 2 (Pizzaria):</span> O pizzaiolo sempre esquece o orégano. Um Poka-Yoke seria uma colher de orégano com o cabo feito para encaixar em cima da alça do cortador de pizza. Ele <span class="font-bold">tem</span> que pegar o orégano para conseguir pegar o cortador.</li>
+                            <li><span class="font-bold">Exemplo 3 (Sistema):</span> O sistema do caixa não deixa fechar o pedido se o campo "telefone" não tiver 9 dígitos. Isso previne o erro de anotar telefone errado.</li>
+                        </ul>
+                    `,
+                    challengeTitle: "Desafio 4: Produção Inteligente",
+                    challengeTask: "Desafio em duas etapas: Analise o quadro Kanban e depois crie soluções Poka-Yoke.",
+                    // Os dados do desafio 4 estão no JS (setupChallenge4)
+                    pointsPerCorrect: 25, // Mais pontos para desafios mais difíceis
+                    pointsPerWrong: -10
+                }
+            ]
+        };
+
+        // --- ELEMENTOS DA DOM ---
+        const screens = {
+            welcome: document.getElementById('welcome-screen'),
+            journey: document.getElementById('journey-screen'),
+            learn: document.getElementById('learn-screen'),
+            challenge: document.getElementById('challenge-screen'),
+            result: document.getElementById('result-screen'),
+            final: document.getElementById('final-screen'),
+            cheatModal: document.getElementById('cheat-modal'),
+        };
+
+        const ui = {
+            playerNameInput: document.getElementById('player-name-input'),
+            playerNameDisplay: document.getElementById('player-name-display'),
+            startGameBtn: document.getElementById('start-game-btn'),
+            scoreDisplay: document.getElementById('score-display'),
+            journeyMap: document.getElementById('journey-map'),
+            learnTitle: document.getElementById('learn-title'),
+            learnContent: document.getElementById('learn-content'),
+            startChallengeBtn: document.getElementById('start-challenge-btn'),
+            challengeTitle: document.getElementById('challenge-title'),
+            challengeTask: document.getElementById('challenge-task'),
+            challengeArea: document.getElementById('challenge-area'),
+            submitChallengeBtn: document.getElementById('submit-challenge-btn'),
+            challengeFeedback: document.getElementById('challenge-feedback'),
+            resultTitle: document.getElementById('result-title'),
+            resultMessage: document.getElementById('result-message'),
+            resultScore: document.getElementById('result-score'),
+            nextModuleBtn: document.getElementById('next-module-btn'),
+            finalScore: document.getElementById('final-score'),
+            finalPlayerName: document.getElementById('final-player-name'),
+            finalCheats: document.getElementById('final-cheats'),
+            cheatMessage: document.getElementById('cheat-message'),
+            cheatOkBtn: document.getElementById('cheat-ok-btn'),
+        };
+
+        // --- FUNÇÕES DE NAVEGAÇÃO ---
+
+        /**
+         * Função de embaralhar (Fisher-Yates)
+         * ANTI-CÓPIA: Garante que os itens apareçam em ordem diferente para cada aluno.
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        function showScreen(screenId) {
+            Object.values(screens).forEach(screen => {
+                screen.classList.remove('active');
+            });
+            screens[screenId].classList.add('active');
+        }
+
+        function updateScore(points) {
+            gameState.totalScore += points;
+            gameState.challengeScore += points;
+            ui.scoreDisplay.textContent = gameState.totalScore;
+        }
+
+        function startGame() {
+            gameState.playerName = ui.playerNameInput.value.trim() || "Iniciado Anônimo";
+            ui.playerNameDisplay.textContent = `Iniciado: ${gameState.playerName}`;
+            gameState.modules[0].status = 'current'; // Libera o primeiro módulo
+            renderJourneyMap();
+            showScreen('journey');
+        }
+
+        function renderJourneyMap() {
+            ui.journeyMap.innerHTML = '';
+            gameState.modules.forEach(module => {
+                const moduleEl = document.createElement('div');
+                moduleEl.className = `journey-module bg-gray-700 p-6 rounded-lg border-4 border-gray-600 transition-all duration-300 ${module.status}`;
+                moduleEl.innerHTML = `
+                    <h3 class="text-xl font-bold">${module.name}</h3>
+                    <p class="journey-status text-sm font-semibold uppercase ${module.status === 'completed' ? 'text-green-400' : (module.status === 'current' ? 'text-yellow-400' : 'text-gray-500')}">
+                        ${module.status === 'completed' ? 'Concluído' : (module.status === 'current' ? 'Próximo Desafio' : 'Bloqueado')}
+                    </p>
+                `;
+                if (module.status === 'current') {
+                    moduleEl.onclick = () => selectModule(module.id);
+                }
+                ui.journeyMap.appendChild(moduleEl);
+            });
+        }
+
+        function selectModule(moduleId) {
+            const module = gameState.modules.find(m => m.id === moduleId);
+            if (!module || module.status !== 'current') return;
+
+            ui.learnTitle.textContent = module.learnTitle;
+            ui.learnContent.innerHTML = module.learnContent;
+            
+            // Prepara o botão para iniciar o desafio
+            ui.startChallengeBtn.onclick = () => startChallenge(moduleId);
+            
+            showScreen('learn');
+        }
+
+        function startChallenge(moduleId) {
+            const module = gameState.modules.find(m => m.id === moduleId);
+            gameState.currentModuleId = moduleId;
+            gameState.challengeScore = 0; // Reseta score do desafio
+
+            ui.challengeTitle.textContent = module.challengeTitle;
+            ui.challengeTask.textContent = module.challengeTask;
+            ui.challengeArea.innerHTML = '';
+            ui.submitChallengeBtn.onclick = null;
+            ui.submitChallengeBtn.textContent = "Verificar Respostas";
+            ui.submitChallengeBtn.classList.remove('hidden');
+            ui.challengeFeedback.textContent = '';
+            
+            // ANTI-AI: O desafio não é texto, é interação de clicar em opções embaralhadas.
+            switch (moduleId) {
+                case 1:
+                    setupChallenge1(module);
+                    break;
+                case 2:
+                    setupChallenge2(module);
+                    break;
+                case 3:
+                    setupChallenge3(module);
+                    break;
+                case 4:
+                    setupChallenge4(module);
+                    break;
+            }
+            
+            showScreen('challenge');
+        }
+
+        function showResult(success, message) {
+            ui.resultTitle.textContent = success ? "Desafio Concluído!" : "Módulo Falhou!";
+            ui.resultMessage.textContent = message;
+            ui.resultScore.textContent = `${gameState.challengeScore > 0 ? '+' : ''}${gameState.challengeScore}`;
+            
+            const module = gameState.modules.find(m => m.id === gameState.currentModuleId);
+            module.status = 'completed';
+
+            // Libera o próximo módulo
+            const nextModule = gameState.modules.find(m => m.id === gameState.currentModuleId + 1);
+            if (nextModule) {
+                nextModule.status = 'current';
+                ui.nextModuleBtn.textContent = "Voltar para a Jornada";
+            } else {
+                ui.nextModuleBtn.textContent = "Ver Pontuação Final";
+            }
+            
+            ui.nextModuleBtn.onclick = () => {
+                if (nextModule) {
+                    renderJourneyMap();
+                    showScreen('journey');
+                } else {
+                    showFinalScreen();
+                }
+            };
+
+            showScreen('result');
+        }
+        
+        function showFinalScreen() {
+            ui.finalScore.textContent = gameState.totalScore;
+            ui.finalPlayerName.textContent = `Iniciado: ${gameState.playerName}`;
+            if (gameState.cheatAttempts > 0) {
+                ui.finalCheats.textContent = `Tentativas de trapaça detectadas: ${gameState.cheatAttempts}`;
+            }
+            showScreen('final');
+        }
+
+        // --- LÓGICA DOS DESAFIOS ---
+
+        /**
+         * Desafio 1: O que é Valor?
+         * Tipo: Multi-seleção
+         */
+        function setupChallenge1(module) {
+            const shuffledData = shuffleArray([...module.challengeData]);
+            
+            shuffledData.forEach(item => {
+                const itemEl = createOptionItem(item.text, { 'isValue': item.isValue });
+                ui.challengeArea.appendChild(itemEl);
+            });
+            
+            ui.submitChallengeBtn.onclick = () => submitChallenge1(module);
+        }
+
+        function submitChallenge1(module) {
+            const options = ui.challengeArea.querySelectorAll('.option-item');
+            const { correct, wrong } = checkMultiSelect(options, 'isValue');
+            
+            const points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
+            updateScore(points);
+            
+            ui.submitChallengeBtn.classList.add('hidden');
+            const message = `Você acertou ${correct} e errou ${wrong}. Lembre-se: Valor é só o que o cliente pagaria!`;
+            setTimeout(() => showResult(true, message), 2000);
+        }
+        
+        /**
+         * Desafio 2: Os 7 Desperdícios
+         * Tipo: Classificação (Múltipla Escolha por item)
+         */
+        const challenge2Data = {
+            pizzaria: [
+                { q: "O pizzaiolo anda 10 passos para pegar o queijo e 10 para voltar.", a: "Movimentação" },
+                { q: "A pizza fica pronta e espera 15 min na prateleira pelo motoboy.", a: "Espera" },
+                { q: "Fizeram 10 pizzas de calabresa 'para adiantar', mas só venderam 2.", a: "Superprodução" },
+                { q:KA: "A pizza queimou e teve que ser jogada fora e refeita.", a: "Defeitos" },
+                { q: "O motoboy leva a pilha de massas do freezer para a bancada (do outro lado da loja).", a: "Transporte" },
+                { q: "Temos 5.000 caixas de pizza paradas no estoque há 3 meses.", a: "Inventário" },
+                { q: "Colocamos a pizza na caixa, depois na sacola, depois amarramos um laço de fita.", a: "Superprocessamento" },
+                { q: "O atendente precisa digitar o pedido no sistema, depois escrever à mão na comanda.", a: "Superprocessamento" }
+            ],
+            festival: [
+                { q: "Compraram 20.000 copos para o evento, mas só 8.000 pessoas apareceram.", a: "Inventário" },
+                { q: "O caminhão de bebidas descarregou a 500m do bar principal. Tiveram que levar tudo em carrinhos.", a: "Transporte" },
+                { q: "O técnico de som precisa andar do palco até a mesa de som (no meio do público) toda hora.", a: "Movimentação" },
+                { q: "A banda 1 terminou, mas a banda 2 está atrasada. O palco fica vazio por 30 min.", a: "Espera" },
+                { q: "O telão mostra o logo do patrocinador 50x antes do show começar.", a: "Superprocessamento" },
+                { q: "O microfone do cantor falha no meio do show.", a: "Defeitos" },
+                { q: "Imprimiram 10.000 panfletos extras que não foram distribuídos.", a: "Superprodução" }
+            ],
+            tiposMuda: ["Transporte", "Inventário", "Movimentação", "Espera", "Superprodução", "Superprocessamento", "Defeitos"]
+        };
+
+        function setupChallenge2(module) {
+            // Combina os dois sets de desafios e embaralha
+            const allQuestions = [
+                ...shuffleArray(challenge2Data.pizzaria).map(q => ({...q, context: "Na Pizzaria:"})),
+                ...shuffleArray(challenge2Data.festival).map(q => ({...q, context: "No Festival:"}))
+            ];
+            
+            allQuestions.forEach((item, index) => {
+                const questionEl = document.createElement('div');
+                questionEl.className = 'bg-gray-700 p-4 rounded-lg border border-gray-600';
+                
+                let optionsHTML = '';
+                // ANTI-CÓPIA: As opções de resposta também são embaralhadas
+                const shuffledOptions = shuffleArray([...challenge2Data.tiposMuda]);
+                
+                shuffledOptions.forEach(opt => {
+                    optionsHTML += `
+                        <label class="inline-flex items-center m-1">
+                            <input type="radio" name="q_${index}" value="${opt}" class="form-radio text-cyan-500 bg-gray-800 border-gray-600">
+                            <span class="ml-2 text-sm">${opt}</span>
+                        </label>
+                    `;
+                });
+                
+                questionEl.innerHTML = `
+                    <p class="font-semibold mb-2"><span class="text-sm text-cyan-300">${item.context}</span> ${item.q}</p>
+                    <div class="flex flex-wrap">${optionsHTML}</div>
+                `;
+                questionEl.dataset.answer = item.a;
+                ui.challengeArea.appendChild(questionEl);
+            });
+            
+            ui.submitChallengeBtn.onclick = () => submitChallengeRadio(module, 'answer');
+        }
+
+        /**
+         * Desafio 3: 5S e Kaizen
+         * Tipo: Múltiplas etapas
+         */
+        
+        // Dados para o Desafio 3
+        const challenge3Data = {
+            seiri: [
+                { item: "Rolo de massa", isUseless: false },
+                { item: "Tomate estragado", isUseless: true },
+                { item: "Espátula", isUseless: false },
+                { item: "Celular pessoal do pizzaiolo", isUseless: true },
+                { item: "Molho de tomate (aberto)", isUseless: false },
+                { item: "Embalagem de queijo vazia", isUseless: true },
+                { item: "Queijo ralado", isUseless: false },
+                { item: "Comanda de pedido de ontem", isUseless: true },
+                { item: "Farinha", isUseless: false }
+            ],
+            seiton: [
+                { item: "Rolo de massa", local: "Bancada", localCorreto: "Bancada" },
+                { item: "Molho de tomate (aberto)", local: "Bancada", localCorreto: "Geladeira" },
+                { item: "Espátula", local: "Perto do Forno", localCorreto: "Perto do Forno" },
+                { item: "Queijo ralado", local: "Perto do Forno", localCorreto: "Geladeira" },
+                { item: "Farinha", local: "Geladeira", localCorreto: "Bancada" }
+            ],
+            kaizen: [
+                { 
+                    q: "Problema: O pizzaiolo perde tempo procurando ingredientes na geladeira (Muda: Movimentação).",
+                    options: [
+                        { text: "Comprar uma geladeira maior e mais moderna.", isBest: false },
+                        { text: "Etiquetar todas as prateleiras e potes dentro da geladeira.", isBest: true },
+                        { text: "Contratar um assistente só para pegar coisas na geladeira.", isBest: false }
+                    ]
+                },
+                {
+                    q: "Problema: Os motoboys pegam os pedidos errados com frequência (Muda: Defeito).",
+                    options: [
+                        { text: "Gritar com os motoboys para prestarem mais atenção.", isBest: false },
+                        { text: "Criar um sistema de prateleiras numeradas (1, 2, 3) e grampear a comanda na sacola.", isBest: true },
+                        { text: "Dar 50% de desconto para o cliente que receber o pedido errado.", isBest: false }
+                    ]
+                }
+            ]
+        };
+
+        // Gerencia as 3 etapas do Desafio 3
+        function setupChallenge3(module) {
+            runChallenge3Step(1, module);
+        }
+
+        function runChallenge3Step(step, module) {
+            ui.challengeArea.innerHTML = '';
+            ui.challengeFeedback.textContent = '';
+            ui.submitChallengeBtn.classList.remove('hidden'); // *** CORREÇÃO DO BUG ***
+            
+            if (step === 1) { // Etapa 1: Seiri (Descarte)
+                ui.challengeTask.textContent = "Etapa 1: SEIRI (Utilização). A bancada está uma bagunça. Clique em TODOS os itens que são inúteis e devem ser JOGADOS FORA.";
+                const shuffledData = shuffleArray([...challenge3Data.seiri]);
+                
+                shuffledData.forEach(item => {
+                    const itemEl = createOptionItem(item.item, { 'isUseless': item.isUseless });
+                    ui.challengeArea.appendChild(itemEl);
+                });
+                
+                ui.submitChallengeBtn.onclick = () => {
+                    const options = ui.challengeArea.querySelectorAll('.option-item');
+                    const { correct, wrong } = checkMultiSelect(options, 'isUseless');
+                    const points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
+                    updateScore(points);
+                    
+                    ui.challengeFeedback.textContent = `Seiri: ${correct} itens inúteis identificados!`;
+                    ui.submitChallengeBtn.classList.add('hidden'); // Esconde botão durante transição
+                    setTimeout(() => runChallenge3Step(2, module), 2500); // Próxima etapa
+                };
+
+            } else if (step === 2) { // Etapa 2: Seiton (Organização)
+                ui.challengeTask.textContent = "Etapa 2: SEITON (Organização). Dos itens úteis que sobraram, alguns estão no lugar errado. Clique em TODOS os itens que estão no LOCAL ERRADO.";
+                const shuffledData = shuffleArray([...challenge3Data.seiton]);
+                
+                shuffledData.forEach(item => {
+                    const isWrongPlace = item.local !== item.localCorreto;
+                    const itemEl = createOptionItem(`${item.item} (está na: ${item.local})`, { 'isWrongPlace': isWrongPlace });
+                    ui.challengeArea.appendChild(itemEl);
+                });
+                
+                ui.submitChallengeBtn.onclick = () => {
+                    const options = ui.challengeArea.querySelectorAll('.option-item');
+                    const { correct, wrong } = checkMultiSelect(options, 'isWrongPlace');
+                    const points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
+                    updateScore(points);
+                    
+                    ui.challengeFeedback.textContent = `Seiton: ${correct} itens no lugar errado identificados!`;
+                    ui.submitChallengeBtn.classList.add('hidden'); // Esconde botão durante transição
+                    setTimeout(() => runChallenge3Step(3, module), 2500); // Próxima etapa
+                };
+
+            } else if (step === 3) { // Etapa 3: Kaizen (Melhoria)
+                ui.challengeTask.textContent = "Etapa 3: KAIZEN (Melhoria). Escolha a MELHOR solução (pequena, barata, inteligente) para cada problema.";
+                
+                shuffleArray([...challenge3Data.kaizen]).forEach((item, index) => {
+                    const questionEl = createRadioQuestion(item, index, 'k', 'isBest');
+                    ui.challengeArea.appendChild(questionEl);
+                });
+
+                ui.submitChallengeBtn.onclick = () => {
+                    submitChallengeRadio(module, 'isBest');
+                };
+            }
+        }
+        
+        /**
+         * Desafio 4: Kanban e Poka-Yoke
+         * Tipo: Múltiplas etapas
+         */
+        
+        // Dados para o Desafio 4
+        const challenge4Data = {
+            kanban: { 
+                q: "O quadro Kanban da pizzaria está assim. A coluna 'Em Preparo' tem limite de 3 pizzas (WIP=3), mas já tem 5! Qual a AÇÃO LEAN correta a se fazer IMEDIATAMENTE?",
+                options: [
+                    { text: "Puxar mais 2 pedidos de 'A Fazer' para 'Em Preparo' para adiantar.", isBest: false },
+                    { text: "Focar em mover pizzas de 'Pronto' para 'Entrega' para liberar espaço.", isBest: false },
+                    { text: "PARAR de puxar pedidos de 'A Fazer' e ajudar a mover as 5 pizzas de 'Em Preparo' para 'Assando'.", isBest: true },
+                    { text: "Contratar mais um pizzaiolo para a coluna 'Em Preparo'.", isBest: false }
+                ]
+            },
+            pokaYoke: [
+                { 
+                    q: "Problema: O pizzaiolo às vezes usa a massa errada (normal vs. integral).",
+                    options: [
+                        { text: "Treinar o pizzaiolo novamente.", isBest: false },
+                        { text: "Armazenar as massas em potes de CORES diferentes (Ex: Pote Verde = Integral).", isBest: true },
+                        { text: "Pesar a massa toda vez antes de usar.", isBest: false }
+                    ]
+                },
+                {
+                    q: "Problema: O motoboy esquece de pegar a máquina de cartão.",
+                    options: [
+                        { text: "Multar o motoboy em R$ 10,00 a cada esquecimento.", isBest: false },
+                        { text: "Colocar um gancho para a chave da moto em CIMA da máquina de cartão (ele tem que pegar a máquina para pegar a chave).", isBest: true },
+                        { text: "Ligar para o cliente e perguntar se ele pode pagar em dinheiro.", isBest: false }
+                    ]
+                },
+                {
+                    q: "Problema: O sistema permite agendar entregas para bairros que não atendemos.",
+                    options: [
+                        { text: "O sistema deve ter uma lista de CEPs válidos e bloquear pedidos de CEPs fora da lista.", isBest: true },
+                        { text: "Imprimir um mapa gigante na parede para o atendente consultar.", isBest: false },
+                        { text: "Ligar para o cliente após o pedido e cancelar se for no bairro errado.", isBest: false }
+                    ]
+                }
+            ]
+        };
+        
+        function setupChallenge4(module) {
+            runChallenge4Step(1, module);
+        }
+
+        function runChallenge4Step(step, module) {
+            ui.challengeArea.innerHTML = '';
+            ui.challengeFeedback.textContent = '';
+            ui.submitChallengeBtn.classList.remove('hidden');
+
+            if (step === 1) { // Etapa 1: Kanban
+                ui.challengeTask.textContent = "Etapa 1: KANBAN (Gestão Visual).";
+                
+                // Desenha o quadro Kanban
+                const kanbanHTML = `
+                    <div class="kanban-board mb-4">
+                        <div class="kanban-column">
+                            <div class="kanban-column-title">A Fazer (WIP: ∞)</div>
+                            <div class="kanban-card">Pedido #101</div>
+                            <div class="kanban-card">Pedido #102</div>
+                            <div class="kanban-card">Pedido #103</div>
+                        </div>
+                        <div class="kanban-column bottleneck">
+                            <div class="kanban-column-title">Em Preparo (WIP: 3)</div>
+                            <div class="kanban-card">Pedido #096</div>
+                            <div class="kanban-card">Pedido #097</div>
+                            <div class="kanban-card">Pedido #098</div>
+                            <div class="kanban-card">Pedido #099</div>
+                            <div class="kanban-card">Pedido #100</div>
+                        </div>
+                        <div class="kanban-column">
+                            <div class="kanban-column-title">Assando (WIP: 2)</div>
+                            <div class="kanban-card">Pedido #095</div>
+                        </div>
+                        <div class="kanban-column">
+                            <div class="kanban-column-title">Pronto (WIP: 5)</div>
+                            <div class="kanban-card">Pedido #094</div>
+                        </div>
+                    </div>
+                `;
+                ui.challengeArea.innerHTML += kanbanHTML;
+                
+                // Adiciona a pergunta
+                const qData = challenge4Data.kanban;
+                const questionEl = createRadioQuestion(qData, 1, 'k', 'isBest');
+                ui.challengeArea.appendChild(questionEl);
+                
+                ui.submitChallengeBtn.onclick = () => {
+                    const { correct, wrong } = checkRadioAnswers(module, 'isBest');
+                    const points = (correct * (module.pointsPerCorrect + 25)) + (wrong * module.pointsPerWrong); // Bonus
+                    updateScore(points);
+                    
+                    ui.challengeFeedback.textContent = `Kanban: ${correct > 0 ? 'Gargalo identificado!' : 'Não identificou o gargalo!'}`;
+                    ui.submitChallengeBtn.classList.add('hidden');
+                    setTimeout(() => runChallenge4Step(2, module), 3000);
+                };
+
+            } else if (step === 2) { // Etapa 2: Poka-Yoke
+                ui.challengeTask.textContent = "Etapa 2: POKA-YOKE (À Prova de Erros). Escolha a MELHOR solução à prova de erros.";
+                
+                shuffleArray([...challenge4Data.pokaYoke]).forEach((item, index) => {
+                    const questionEl = createRadioQuestion(item, index, 'p', 'isBest');
+                    ui.challengeArea.appendChild(questionEl);
+                });
+
+                ui.submitChallengeBtn.onclick = () => {
+                    submitChallengeRadio(module, 'isBest');
+                };
+            }
+        }
+
+        
+        // --- Funções Auxiliares de Desafio (Genéricas) ---
+        
+        // Auxiliar para criar um item de multi-seleção
+        function createOptionItem(text, dataAttributes) {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'option-item bg-gray-700 p-4 rounded-lg cursor-pointer border-2 border-gray-600';
+            itemEl.textContent = text;
+            for (const key in dataAttributes) {
+                itemEl.dataset[key] = dataAttributes[key];
+            }
+            itemEl.onclick = () => {
+                itemEl.classList.toggle('selected');
+            };
+            return itemEl;
+        }
+        
+        // Auxiliar para checar um desafio de multi-seleção
+        function checkMultiSelect(options, dataAttribute) {
+            let correct = 0;
+            let wrong = 0;
+
+            options.forEach(opt => {
+                const isCorrect = opt.dataset[dataAttribute] === 'true';
+                const isSelected = opt.classList.contains('selected');
+
+                if (isCorrect && isSelected) {
+                    correct++;
+                    opt.classList.add('correct');
+                } else if (!isCorrect && isSelected) {
+                    wrong++;
+                    opt.classList.add('wrong');
+                } else if (isCorrect && !isSelected) {
+                    wrong++; // Penaliza por não selecionar um item correto
+                    opt.classList.add('wrong');
+                }
+                opt.classList.add('disabled');
+                opt.onclick = null;
+            });
+            
+            return { correct, wrong };
+        }
+
+        // Auxiliar para criar uma questão de radio-button
+        function createRadioQuestion(item, index, namePrefix, dataAttribute) {
+            const questionEl = document.createElement('div');
+            questionEl.className = 'bg-gray-700 p-4 rounded-lg border border-gray-600';
+            let optionsHTML = '';
+            
+            shuffleArray([...item.options]).forEach(opt => {
+                optionsHTML += `
+                    <label class="block p-2 rounded hover:bg-gray-600">
+                        <input type="radio" name="${namePrefix}_${index}" value="${opt[dataAttribute]}" class="form-radio text-cyan-500 bg-gray-800 border-gray-600">
+                        <span class="ml-2">${opt.text}</span>
+                    </label>
+                `;
+            });
+            
+            questionEl.innerHTML = `<p class="font-semibold mb-2">${item.q}</p><div>${optionsHTML}</div>`;
+            questionEl.dataset[dataAttribute] = 'true'; // Marcador para a pergunta
+            
+            if (item.a) { // Para Desafio 2
+                questionEl.dataset.answer = item.a;
+            }
+            return questionEl;
+        }
+        
+        // Auxiliar para checar um desafio de radio-button
+        function checkRadioAnswers(module, dataAttribute) {
+            let correctSelections = 0;
+            let wrongSelections = 0;
+            const questions = ui.challengeArea.querySelectorAll(`div[data-${dataAttribute}="true"]`);
+            
+            questions.forEach(q => {
+                const selectedInput = q.querySelector(`input[type="radio"]:checked`);
+                q.querySelectorAll('input').forEach(inp => inp.disabled = true);
+                
+                const isMultiStepAnswer = dataAttribute === 'isBest';
+                const correctAnswerValue = isMultiStepAnswer ? 'true' : q.dataset.answer;
+                const correctEl = isMultiStepAnswer ? 
+                                  q.querySelector(`input[value="true"]`) : 
+                                  q.querySelector(`input[value="${correctAnswerValue}"]`);
+
+                if (selectedInput) {
+                    if (selectedInput.value === correctAnswerValue) {
+                        correctSelections++;
+                        selectedInput.parentElement.classList.add('text-green-400', 'font-bold');
+                    } else {
+                        wrongSelections++;
+                        selectedInput.parentElement.classList.add('text-red-400', 'line-through');
+                        if(correctEl) correctEl.parentElement.classList.add('text-green-400', 'font-bold');
+                    }
+                } else {
+                    wrongSelections++; // Penaliza por não responder
+                    if(correctEl) correctEl.parentElement.classList.add('text-green-400', 'font-bold');
+                }
+            });
+            
+            return { correct: correctSelections, wrong: wrongSelections, total: questions.length };
+        }
+
+        // Função de submissão genérica para radio-buttons (Desafios 2, 3.3, 4.1, 4.2)
+        function submitChallengeRadio(module, dataAttribute) {
+            const dataName = dataAttribute === 'isBest' ? 'isBest' : 'answer';
+            const { correct, wrong, total } = checkRadioAnswers(module, dataName);
+            
+            let points;
+            if (module.id === 4 && dataAttribute === 'isBest') { // Desafio 4 Poka-Yoke
+                points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
+            } else {
+                points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
+            }
+            updateScore(points);
+            
+            ui.submitChallengeBtn.classList.add('hidden');
+            const message = `Você acertou ${correct} de ${total}.`;
+            setTimeout(() => showResult(true, message), 4000); // Mais tempo para revisar
+        }
+
+
+        // --- FUNÇÕES ANTI-CHEAT ---
+        
+        function handleCheat() {
+            // Só ativa se estiver na tela de desafio E não tiver sido pego nos últimos 3s
+            if (!screens.challenge.classList.contains('active') || gameState.isCheating) {
+                return;
+            }
+            gameState.isCheating = true;
+            gameState.cheatAttempts++;
+            updateScore(-150); // Penalidade pesada
+            
+            showCheatWarning(`Atenção! Sair da tela ou tentar capturá-la é contra as regras. Penalidade: -150 Pontos.`);
+            
+            // Trava o debounce
+            setTimeout(() => {
+                gameState.isCheating = false;
+            }, 3000); // 3 segundos de cooldown
+        }
+
+        function showCheatWarning(message) {
+            ui.cheatMessage.textContent = message;
+            screens.cheatModal.classList.add('active');
+        }
+
+        function hideCheatWarning() {
+            screens.cheatModal.classList.remove('active');
+        }
+
+
+        // --- INICIALIZAÇÃO E EVENTOS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Botão de Iniciar Jogo
+            ui.startGameBtn.addEventListener('click', () => {
+                if (ui.playerNameInput.value.trim() === "") {
+                    ui.playerNameInput.classList.add('border-red-500', 'animate-pulse');
+                    ui.playerNameInput.placeholder = "Por favor, digite seu nome para começar!";
+                    return;
+                }
+                startGame();
+            });
+            
+            // Botão OK do Modal Anti-Cheat
+            ui.cheatOkBtn.onclick = hideCheatWarning;
+
+            // --- Eventos Anti-Cheat ---
+            
+            // 1. Sair da Aba/Janela
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    handleCheat();
+                }
+            });
+            
+            // 2. Perda de Foco (Alternar Janela)
+            window.addEventListener('blur', handleCheat);
+            
+            // 3. Desativar Menu de Contexto (Botão Direito)
+            document.addEventListener('contextmenu', e => e.preventDefault());
+
+            // 4. Detectar Print Screen
+            document.addEventListener('keydown', e => {
+                // Tecla "PrintScreen"
+                if (e.key === 'PrintScreen') {
+                    e.preventDefault(); // Impede a captura
+                    handleCheat();
+                }
+                
+                // Atalhos comuns de captura (Cmd+Shift+3/4, Ctrl+Shift+S, etc.)
+                if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
+                    if (['3', '4', 's', 'S'].includes(e.key)) {
+                        e.preventDefault();
+                        handleCheat();
+                    }
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
+
+
