@@ -673,7 +673,7 @@
             challengeScore: 0,
             cheatAttempts: 0,
             isCheating: false, // Debounce
-            toastTimer: null,   // Timer do Toast
+            toastTimer: null,    // Timer do Toast
             activeModules: [] // Armazena a jornada atual (Pizzaria ou Oficina)
         };
 
@@ -803,6 +803,9 @@
 
         function goHome() {
             gameState.totalScore = 0;
+            // [CORREÇÃO] Reseta a pontuação específica também
+            gameState.totalScorePizzaria = 0;
+            gameState.totalScoreOficina = 0;
             gameState.currentModuleId = 1;
             gameState.activeModules = [];
             
@@ -856,7 +859,7 @@
             ui.submitChallengeBtn.classList.remove('hidden');
             ui.challengeFeedback.textContent = '';
             
-            switch (moduleId) {
+            switch (module.id) { // Usa o ID do módulo
                 case 1:
                     setupChallenge1(module);
                     break;
@@ -872,9 +875,15 @@
             }
             
             showScreen('challenge');
+            
+            // Ativa os listeners anti-cheat apenas na tela de desafio
+            addCheatListeners();
         }
 
         function showResult(success, message) {
+            // Remove os listeners anti-cheat ao sair da tela de desafio
+            removeCheatListeners();
+
             ui.resultTitle.textContent = success ? "Desafio Concluído!" : "Módulo Falhou!";
             ui.resultMessage.textContent = message;
             ui.resultScore.textContent = `${gameState.challengeScore > 0 ? '+' : ''}${gameState.challengeScore}`;
@@ -904,7 +913,8 @@
             ui.finalPlayerName.textContent = `Iniciado: ${gameState.playerName}`;
             ui.finalCheats.textContent = gameState.cheatAttempts > 0 ? `Tentativas de trapaça detectadas: ${gameState.cheatAttempts}` : '';
 
-            const isPizzaria = gameState.activeModules[0].name.includes("Pizzaria");
+            // Verifica qual jornada estava ativa
+            const isPizzaria = gameState.activeModules.some(m => m.name.includes("Pizzaria"));
             
             if (isPizzaria) {
                 gameState.totalScorePizzaria = gameState.totalScore; 
@@ -915,13 +925,16 @@
             }
 
             ui.finalScoresArea.innerHTML = '';
-            if (gameState.totalScorePizzaria > 0 || (gameState.totalScoreOficina > 0 && gameState.totalScorePizzaria === 0)) { 
+            
+            // Mostra a pontuação da Pizzaria se ela tiver sido jogada
+            if (gameState.totalScorePizzaria > 0 || (isPizzaria && gameState.totalScore > 0)) {
                  ui.finalScoresArea.innerHTML += `
                     <p class="text-lg text-gray-400">Pontuação (Pizzaria):</p>
                     <p class="text-4xl font-black text-yellow-400 mb-4">${gameState.totalScorePizzaria}</p>
                 `;
             }
-            if (gameState.totalScoreOficina > 0) {
+            // Mostra a pontuação da Oficina se ela tiver sido jogada
+            if (gameState.totalScoreOficina > 0 || (!isPizzaria && gameState.totalScore > 0)) {
                  ui.finalScoresArea.innerHTML += `
                     <p class="text-lg text-gray-400">Pontuação (Oficina):</p>
                     <p class="text-4xl font-black text-yellow-400">${gameState.totalScoreOficina}</p>
@@ -963,16 +976,17 @@
             let allQuestions = [];
             
             if (isPizzaria) {
-                // [CORREÇÃO] Garante que está copiando o array antes de embaralhar
+                // [CORREÇÃO] Remove a cópia de array redundante [...]
                 allQuestions = [
-                    ...shuffleArray([...module.challengeData.pizzaria]).map(q => ({...q, context: "Na Pizzaria:"})),
-                    ...shuffleArray([...module.challengeData.festival]).map(q => ({...q, context: "No Festival:"}))
+                    ...shuffleArray(module.challengeData.pizzaria).map(q => ({...q, context: "Na Pizzaria:"})),
+                    ...shuffleArray(module.challengeData.festival).map(q => ({...q, context: "No Festival:"}))
                 ];
             } else {
-                allQuestions = shuffleArray([...module.challengeData.oficina]).map(q => ({...q, context: "Na Oficina:"}));
+                allQuestions = shuffleArray(module.challengeData.oficina).map(q => ({...q, context: "Na Oficina:"}));
             }
             
-            const tiposMuda = shuffleArray([...module.challengeData.tiposMuda]);
+            // [CORREÇÃO] Remove a cópia de array redundante [...]
+            const tiposMuda = shuffleArray(module.challengeData.tiposMuda);
 
             allQuestions.forEach((item, index) => {
                 const questionEl = document.createElement('div');
@@ -981,12 +995,12 @@
                 let optionsHTML = '';
                 // Cria as 7 opções de radio para cada pergunta
                 tiposMuda.forEach(tipo => {
-                     optionsHTML += `
-                        <label class="block p-2 rounded hover:bg-gray-600">
-                            <input type="radio" name="muda_${index}" value="${tipo}" class="form-radio text-cyan-500 bg-gray-800 border-gray-600">
-                            <span class="ml-2">${tipo}</span>
-                        </label>
-                    `;
+                        optionsHTML += `
+                            <label class="block p-2 rounded hover:bg-gray-600">
+                                <input type="radio" name="muda_${index}" value="${tipo}" class="form-radio text-cyan-500 bg-gray-800 border-gray-600">
+                                <span class="ml-2">${tipo}</span>
+                            </label>
+                        `;
                 });
 
                 questionEl.innerHTML = `
@@ -1175,7 +1189,7 @@
                     wrong++;
                     opt.classList.add('wrong');
                 } else if (isCorrect && !isSelected) {
-                    wrong++;
+                    wrong++; // Penaliza por não selecionar a correta
                     opt.classList.add('wrong');
                 }
                 opt.classList.add('disabled');
@@ -1334,6 +1348,55 @@
             }, 3000); 
         }
 
+        // Funções para adicionar e remover os listeners
+        function addCheatListeners() {
+            document.addEventListener('visibilitychange', onVisibilityChange);
+            window.addEventListener('blur', onBlur);
+            document.addEventListener('contextmenu', onContextMenu);
+            document.addEventListener('keydown', onKeyDown);
+        }
+
+        function removeCheatListeners() {
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+            window.removeEventListener('blur', onBlur);
+            document.removeEventListener('contextmenu', onContextMenu);
+            document.removeEventListener('keydown', onKeyDown);
+        }
+
+        // Handlers de eventos nomeados para que possam ser removidos
+        function onVisibilityChange() {
+            if (document.hidden) handleCheat();
+        }
+        function onBlur() {
+            handleCheat();
+        }
+        function onContextMenu(e) {
+            if (screens.challenge.classList.contains('active')) {
+                e.preventDefault();
+                handleCheat();
+            }
+        }
+        function onKeyDown(e) {
+            if (!screens.challenge.classList.contains('active')) return;
+
+            if (e.key === 'PrintScreen') {
+                e.preventDefault(); 
+                handleCheat();
+            }
+            // Atalhos (Cmd/Ctrl + Shift + 3/4/S)
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
+                if (['3', '4', 's', 'S'].includes(e.key)) {
+                    e.preventDefault();
+                    handleCheat();
+                }
+            }
+            // Bloqueia Ctrl+C
+             if (e.ctrlKey && e.key === 'c') {
+                e.preventDefault();
+                handleCheat();
+            }
+        }
+
 
         // --- INICIALIZAÇÃO E EVENTOS ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -1347,32 +1410,10 @@
             ui.goHomeBtn.addEventListener('click', goHome);
             
             // --- Eventos Anti-Cheat ---
-            // Quando a aba perde o foco ou é minimizada
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) handleCheat();
-            });
-            window.addEventListener('blur', handleCheat);
-            
-            // Bloqueia clique direito
-            document.addEventListener('contextmenu', e => e.preventDefault());
-            
-            // Bloqueia PrintScreen e atalhos de captura
-            document.addEventListener('keydown', e => {
-                if (e.key === 'PrintScreen') {
-                    e.preventDefault(); 
-                    handleCheat();
-                }
-                // Atalhos (Cmd/Ctrl + Shift + 3/4/S)
-                if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
-                    if (['3', '4', 's', 'S'].includes(e.key)) {
-                        e.preventDefault();
-                        handleCheat();
-                    }
-                }
-            });
+            // Os listeners agora são adicionados/removidos dinamicamente
+            // nas funções startChallenge() e showResult()
         });
 
     </script>
 </body>
 </html>
-
