@@ -140,7 +140,7 @@
 <body class="bg-gray-900 text-white min-h-screen p-4 md:p-8 flex items-center justify-center">
 
     <!-- Container Principal do Jogo -->
-    <div classs="w-full max-w-5xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 border border-gray-700">
+    <div class="w-full max-w-5xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 border border-gray-700">
 
         <!-- Cabeçalho do Jogo (fixo) -->
         <header class="flex justify-between items-center pb-4 border-b border-gray-700 mb-6">
@@ -719,12 +719,24 @@
 
         // --- FUNÇÕES DE NAVEGAÇÃO ---
 
+        /**
+         * [CORREÇÃO] Adiciona uma verificação para evitar travar se o array for nulo
+         */
         function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+            // Verifica se o array é válido
+            if (!array || !array.length) {
+                console.error("shuffleArray foi chamado com um array nulo ou inválido:", array);
+                return array; // Retorna o array original (ou nulo) para evitar travamento
             }
-            return array;
+            
+            // Cria uma cópia para não modificar o original
+            const newArray = [...array]; 
+            
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
         }
         
         function showScreen(screenId) {
@@ -760,6 +772,7 @@
 
             gameState.totalScore = 0; 
             gameState.currentModuleId = 1;
+            // Cria uma cópia profunda dos módulos para este jogo
             gameState.activeModules = JSON.parse(JSON.stringify(gameData.pizzaria));
             gameState.activeModules[0].status = 'current'; 
             
@@ -776,6 +789,7 @@
             
             gameState.totalScore = 0; 
             gameState.currentModuleId = 1;
+            // Cria uma cópia profunda dos módulos para este jogo
             gameState.activeModules = JSON.parse(JSON.stringify(gameData.oficina));
             gameState.activeModules[0].status = 'current'; 
 
@@ -822,6 +836,8 @@
 
             ui.learnTitle.textContent = module.learnTitle;
             ui.learnContent.innerHTML = module.learnContent;
+            
+            ui.startChallengeBtn.onclick = null; // [CORREÇÃO] Garante que não há cliques duplicados
             ui.startChallengeBtn.onclick = () => startChallenge(moduleId);
             
             showScreen('learn');
@@ -870,12 +886,14 @@
             if (nextModule) {
                 nextModule.status = 'current';
                 ui.nextModuleBtn.textContent = "Voltar para a Jornada";
+                ui.nextModuleBtn.onclick = null; // [CORREÇÃO] Garante que não há cliques duplicados
                 ui.nextModuleBtn.onclick = () => {
                     renderJourneyMap();
                     showScreen('journey');
                 };
             } else {
                 ui.nextModuleBtn.textContent = "Ver Pontuação Final";
+                ui.nextModuleBtn.onclick = null; // [CORREÇÃO] Garante que não há cliques duplicados
                 ui.nextModuleBtn.onclick = showFinalScreen;
             }
 
@@ -897,7 +915,7 @@
             }
 
             ui.finalScoresArea.innerHTML = '';
-            if (gameState.totalScorePizzaria > 0 || gameState.activeModules.length === 0) { // Mostra se tiver pontuação ou se estiver voltando da tela de Oficina
+            if (gameState.totalScorePizzaria > 0 || (gameState.totalScoreOficina > 0 && gameState.totalScorePizzaria === 0)) { 
                  ui.finalScoresArea.innerHTML += `
                     <p class="text-lg text-gray-400">Pontuação (Pizzaria):</p>
                     <p class="text-4xl font-black text-yellow-400 mb-4">${gameState.totalScorePizzaria}</p>
@@ -917,7 +935,7 @@
 
         // Desafio 1: O que é Valor? (Genérico)
         function setupChallenge1(module) {
-            const shuffledData = shuffleArray([...module.challengeData]);
+            const shuffledData = shuffleArray(module.challengeData);
             
             shuffledData.forEach(item => {
                 const itemEl = createOptionItem(item.text, { 'isValue': item.isValue });
@@ -937,30 +955,51 @@
             };
         }
         
-        // Desafio 2: Os 7 Desperdícios (Genérico)
+        /**
+         * Desafio 2: Os 7 Desperdícios (Genérico)
+         */
         function setupChallenge2(module) {
-            const isPizzaria = module.name.includes("Módulo 2");
+            const isPizzaria = module.challengeTitle.includes("Pizzaria");
             let allQuestions = [];
             
             if (isPizzaria) {
+                // [CORREÇÃO] Garante que está copiando o array antes de embaralhar
                 allQuestions = [
-                    ...shuffleArray(module.challengeData.pizzaria).map(q => ({...q, context: "Na Pizzaria:"})),
-                    ...shuffleArray(module.challengeData.festival).map(q => ({...q, context: "No Festival:"}))
+                    ...shuffleArray([...module.challengeData.pizzaria]).map(q => ({...q, context: "Na Pizzaria:"})),
+                    ...shuffleArray([...module.challengeData.festival]).map(q => ({...q, context: "No Festival:"}))
                 ];
             } else {
-                allQuestions = shuffleArray(module.challengeData.oficina).map(q => ({...q, context: "Na Oficina:"}));
+                allQuestions = shuffleArray([...module.challengeData.oficina]).map(q => ({...q, context: "Na Oficina:"}));
             }
             
-            const tiposMuda = module.challengeData.tiposMuda;
+            const tiposMuda = shuffleArray([...module.challengeData.tiposMuda]);
 
             allQuestions.forEach((item, index) => {
-                const questionEl = createRadioQuestion(item, index, 'q', null); // dataAttribute (isBest) não é necessário aqui
+                const questionEl = document.createElement('div');
+                questionEl.className = 'bg-gray-700 p-4 rounded-lg border border-gray-600';
+                
+                let optionsHTML = '';
+                // Cria as 7 opções de radio para cada pergunta
+                tiposMuda.forEach(tipo => {
+                     optionsHTML += `
+                        <label class="block p-2 rounded hover:bg-gray-600">
+                            <input type="radio" name="muda_${index}" value="${tipo}" class="form-radio text-cyan-500 bg-gray-800 border-gray-600">
+                            <span class="ml-2">${tipo}</span>
+                        </label>
+                    `;
+                });
+
+                questionEl.innerHTML = `
+                    <p class="font-semibold mb-2"><span class="text-cyan-300">${item.context}</span> ${item.q}</p>
+                    <div>${optionsHTML}</div>
+                `;
                 questionEl.dataset.answer = item.a; // Marcador para Módulo 2
                 ui.challengeArea.appendChild(questionEl);
             });
             
             ui.submitChallengeBtn.onclick = () => submitChallengeRadio(module);
         }
+
 
         // Desafio 3: 5S e Kaizen (Genérico)
         function setupChallenge3(module) {
@@ -974,7 +1013,7 @@
             
             if (step === 1) { // Etapa 1: Seiri
                 ui.challengeTask.textContent = "Etapa 1: SEIRI (Utilização). Clique em TODOS os itens que são inúteis e devem ser JOGADOS FORA.";
-                const shuffledData = shuffleArray([...module.challengeData.seiri]);
+                const shuffledData = shuffleArray(module.challengeData.seiri);
                 
                 shuffledData.forEach(item => {
                     const itemEl = createOptionItem(item.item, { 'isUseless': item.isUseless });
@@ -994,7 +1033,7 @@
 
             } else if (step === 2) { // Etapa 2: Seiton
                 ui.challengeTask.textContent = "Etapa 2: SEITON (Organização). Clique em TODOS os itens que estão no LOCAL ERRADO.";
-                const shuffledData = shuffleArray([...module.challengeData.seiton]);
+                const shuffledData = shuffleArray(module.challengeData.seiton);
                 
                 shuffledData.forEach(item => {
                     const isWrongPlace = item.local !== item.localCorreto;
@@ -1016,7 +1055,7 @@
             } else if (step === 3) { // Etapa 3: Kaizen
                 ui.challengeTask.textContent = "Etapa 3: KAIZEN (Melhoria). Escolha a MELHOR solução (pequena, barata, inteligente) para cada problema.";
                 
-                shuffleArray([...module.challengeData.kaizen]).forEach((item, index) => {
+                shuffleArray(module.challengeData.kaizen).forEach((item, index) => {
                     const questionEl = createRadioQuestion(item, index, 'k', 'isBest');
                     ui.challengeArea.appendChild(questionEl);
                 });
@@ -1036,7 +1075,7 @@
             ui.challengeArea.innerHTML = '';
             ui.challengeFeedback.textContent = '';
             ui.submitChallengeBtn.classList.remove('hidden');
-            const isPizzaria = module.name.includes("Módulo 4");
+            const isPizzaria = module.challengeTitle.includes("Pizzaria");
 
             if (step === 1) { // Etapa 1: Kanban
                 ui.challengeTask.textContent = "Etapa 1: KANBAN (Gestão Visual).";
@@ -1065,7 +1104,7 @@
                 const questionEl = createRadioQuestion(qData, 1, 'k', 'isBest');
                 ui.challengeArea.appendChild(questionEl);
                 
-                // [CORRIGIDO] Onclick específico para M4-S1
+                // Onclick específico para M4-S1
                 ui.submitChallengeBtn.onclick = () => {
                     const { correct, wrong, total } = checkRadioAnswers(module);
                     
@@ -1086,19 +1125,19 @@
                     ui.challengeFeedback.textContent = `Kanban: ${correct > 0 ? 'Gargalo identificado! (+25 pts Bônus)' : 'Não identificou o gargalo!'}`;
                     ui.submitChallengeBtn.classList.add('hidden');
                     
-                    // [CORRIGIDO] Chama a próxima etapa
+                    // Chama a próxima etapa
                     setTimeout(() => runChallenge4Step(2, module), 3000);
                 };
 
             } else if (step === 2) { // Etapa 2: Poka-Yoke
                 ui.challengeTask.textContent = "Etapa 2: POKA-YOKE (À Prova de Erros). Escolha a MELHOR solução à prova de erros.";
                 
-                shuffleArray([...module.challengeData.pokaYoke]).forEach((item, index) => {
+                shuffleArray(module.challengeData.pokaYoke).forEach((item, index) => {
                     const questionEl = createRadioQuestion(item, index, 'p', 'isBest');
                     ui.challengeArea.appendChild(questionEl);
                 });
 
-                // [CORRIGIDO] Chama o handler final
+                // Chama o handler final
                 ui.submitChallengeBtn.onclick = () => {
                     submitChallengeRadio(module);
                 };
@@ -1146,19 +1185,27 @@
             return { correct, wrong };
         }
 
+        /**
+         * Cria um bloco de pergunta de rádio (múltipla escolha, única resposta)
+         */
         function createRadioQuestion(item, index, namePrefix, dataAttribute) {
             const questionEl = document.createElement('div');
             questionEl.className = 'bg-gray-700 p-4 rounded-lg border border-gray-600';
             let optionsHTML = '';
             
-            shuffleArray([...item.options]).forEach(opt => {
-                optionsHTML += `
-                    <label class="block p-2 rounded hover:bg-gray-600">
-                        <input type="radio" name="${namePrefix}_${index}" value="${opt[dataAttribute]}" class="form-radio text-cyan-500 bg-gray-800 border-gray-600">
-                        <span class="ml-2">${opt.text}</span>
-                    </label>
-                `;
-            });
+            // Apenas itera se item.options existir e for um array
+            if (item.options && Array.isArray(item.options)) {
+                shuffleArray(item.options).forEach(opt => {
+                    // Usa o valor booleano (true/false) ou o valor de texto (para M2)
+                    const value = (dataAttribute === 'isBest') ? opt[dataAttribute] : opt.text;
+                    optionsHTML += `
+                        <label class="block p-2 rounded hover:bg-gray-600">
+                            <input type="radio" name="${namePrefix}_${index}" value="${value}" class="form-radio text-cyan-500 bg-gray-800 border-gray-600">
+                            <span class="ml-2">${opt.text}</span>
+                        </label>
+                    `;
+                });
+            }
             
             questionEl.innerHTML = `<p class="font-semibold mb-2">${item.q}</p><div>${optionsHTML}</div>`;
             
@@ -1170,8 +1217,9 @@
             return questionEl;
         }
         
+        
         /**
-         * [BUG CORRIGIDO] Checa desafios de radio button (M2, M3.3, M4.1, M4.2)
+         * Checa desafios de radio button (M2, M3.3, M4.1, M4.2)
          */
         function checkRadioAnswers(module) {
             let correctSelections = 0;
@@ -1231,7 +1279,7 @@
 
 
         /**
-         * [CORRIGIDO] Submissão genérica para radio-buttons (Desafios 2, 3.3, 4.2)
+         * Submissão genérica para radio-buttons (Desafios 2, 3.3, 4.2)
          */
         function submitChallengeRadio(module) {
             const { correct, wrong, total } = checkRadioAnswers(module);
@@ -1265,9 +1313,11 @@
         }
 
         function handleCheat() {
+            // Só ativa o anti-cheat se estiver na tela de desafio
             if (!screens.challenge.classList.contains('active')) {
                 return;
             }
+            // Debounce para não disparar múltiplos eventos
             if (gameState.isCheating) {
                 return;
             }
@@ -1278,6 +1328,7 @@
             
             showToast("COMPORTAMENTO SUSPEITO! Penalidade: -150 Pontos");
             
+            // Reseta o debounce
             setTimeout(() => {
                 gameState.isCheating = false;
             }, 3000); 
@@ -1296,16 +1347,22 @@
             ui.goHomeBtn.addEventListener('click', goHome);
             
             // --- Eventos Anti-Cheat ---
+            // Quando a aba perde o foco ou é minimizada
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden) handleCheat();
             });
             window.addEventListener('blur', handleCheat);
+            
+            // Bloqueia clique direito
             document.addEventListener('contextmenu', e => e.preventDefault());
+            
+            // Bloqueia PrintScreen e atalhos de captura
             document.addEventListener('keydown', e => {
                 if (e.key === 'PrintScreen') {
                     e.preventDefault(); 
                     handleCheat();
                 }
+                // Atalhos (Cmd/Ctrl + Shift + 3/4/S)
                 if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
                     if (['3', '4', 's', 'S'].includes(e.key)) {
                         e.preventDefault();
