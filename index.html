@@ -1038,7 +1038,9 @@
             
             if (step === 1) { // Etapa 1: Seiri
                 ui.challengeTask.textContent = "Etapa 1: SEIRI (Utilização). Clique em TODOS os itens que são inúteis e devem ser JOGADOS FORA.";
-                const shuffledData = shuffleArray(module.challengeData.seiri);
+                
+                // [CORREÇÃO] Adiciona '|| []' para garantir que não seja undefined
+                const shuffledData = shuffleArray(module.challengeData.seiri || []);
                 
                 shuffledData.forEach(item => {
                     const itemEl = createOptionItem(item.item, { 'isUseless': item.isUseless });
@@ -1058,7 +1060,9 @@
 
             } else if (step === 2) { // Etapa 2: Seiton
                 ui.challengeTask.textContent = "Etapa 2: SEITON (Organização). Clique em TODOS os itens que estão no LOCAL ERRADO.";
-                const shuffledData = shuffleArray(module.challengeData.seiton);
+                
+                // [CORREÇÃO] Adiciona '|| []' para garantir que não seja undefined
+                const shuffledData = shuffleArray(module.challengeData.seiton || []);
                 
                 shuffledData.forEach(item => {
                     const isWrongPlace = item.local !== item.localCorreto;
@@ -1080,7 +1084,8 @@
             } else if (step === 3) { // Etapa 3: Kaizen
                 ui.challengeTask.textContent = "Etapa 3: KAIZEN (Melhoria). Escolha a MELHOR solução (pequena, barata, inteligente) para cada problema.";
                 
-                shuffleArray(module.challengeData.kaizen).forEach((item, index) => {
+                // [CORREÇÃO] Adiciona '|| []' para garantir que não seja undefined
+                shuffleArray(module.challengeData.kaizen || []).forEach((item, index) => {
                     const questionEl = createRadioQuestion(item, index, 'k', 'isBest');
                     ui.challengeArea.appendChild(questionEl);
                 });
@@ -1126,9 +1131,12 @@
                 }
                 ui.challengeArea.innerHTML += kanbanHTML;
                 
+                // [CORREÇÃO PREVENTIVA] Adiciona verificação de existência
                 const qData = module.challengeData.kanban;
-                const questionEl = createRadioQuestion(qData, 1, 'k', 'isBest');
-                ui.challengeArea.appendChild(questionEl);
+                if (qData) {
+                    const questionEl = createRadioQuestion(qData, 1, 'k', 'isBest');
+                    ui.challengeArea.appendChild(questionEl);
+                }
                 
                 // Onclick específico para M4-S1
                 ui.submitChallengeBtn.onclick = () => {
@@ -1158,7 +1166,8 @@
             } else if (step === 2) { // Etapa 2: Poka-Yoke
                 ui.challengeTask.textContent = "Etapa 2: POKA-YOKE (À Prova de Erros). Escolha a MELHOR solução à prova de erros.";
                 
-                shuffleArray(module.challengeData.pokaYoke).forEach((item, index) => {
+                // [CORREÇÃO] Adiciona '|| []' para garantir que não seja undefined
+                shuffleArray(module.challengeData.pokaYoke || []).forEach((item, index) => {
                     const questionEl = createRadioQuestion(item, index, 'p', 'isBest');
                     ui.challengeArea.appendChild(questionEl);
                 });
@@ -1429,4 +1438,5 @@
     </script>
 </body>
 </html>
+
 
