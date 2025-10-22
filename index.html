@@ -91,7 +91,7 @@
             padding-bottom: 1rem;
         }
         .kanban-column {
-            min-width: 200px;
+            min-width: 180px; /* Um pouco menor para caber mais */
             flex: 1;
             background-color: #1f2937; /* gray-800 */
             border-radius: 0.5rem;
@@ -116,17 +116,36 @@
             border: 2px solid #EF4444; /* red-500 */
             box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
         }
+
+        /* Estilo para Toast Anti-Cheat */
+        #toast-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #EF4444; /* red-500 */
+            color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 2px solid #DC2626;
+            z-index: 100;
+            font-weight: 600;
+            transform: translateX(120%);
+            transition: transform 0.5s ease-in-out;
+        }
+        #toast-notification.active {
+            transform: translateX(0);
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen p-4 md:p-8 flex items-center justify-center">
 
     <!-- Container Principal do Jogo -->
-    <div class="w-full max-w-5xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 border border-gray-700">
+    <div classs="w-full max-w-5xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 border border-gray-700">
 
         <!-- Cabeçalho do Jogo (fixo) -->
         <header class="flex justify-between items-center pb-4 border-b border-gray-700 mb-6">
             <div>
-                <h1 class="text-xl md:text-3xl font-black text-cyan-400">A JORNADA LEAN</h1>
+                <h1 id="game-title" class="text-xl md:text-3xl font-black text-cyan-400">JORNADA LEAN</h1>
                 <p id="player-name-display" class="text-sm text-gray-400">Iniciado: (Nenhum)</p>
             </div>
             <div class="text-right">
@@ -139,33 +158,40 @@
         <!-- === TELA 1: BOAS-VINDAS === -->
         <div id="welcome-screen" class="game-screen active">
             <h2 class="text-2xl font-bold mb-4">Bem-vindo à sua Jornada LEAN!</h2>
-            <p class="text-gray-300 mb-4">
-                Você foi desafiado a se tornar um "Faixa-Branca" em LEAN. Sua missão é otimizar processos, começando com uma pizzaria caótica.
-            </p>
             <p class="text-gray-300 mb-6">
-                Esta jornada tem 4 Módulos de aprendizado e desafios. Você terá cerca de 1h30 para completar tudo.
+                Você foi desafiado a se tornar um "Faixa-Branca" em LEAN. Sua missão é otimizar processos em dois cenários diferentes.
             </p>
+            
             <div class="bg-red-900 border border-red-600 text-red-100 p-4 rounded-lg mb-6">
                 <h3 class="font-bold text-lg mb-2">ATENÇÃO, INICIADO! (ANTI-CHEAT ATIVO)</h3>
                 <p>
                     Sua <span class="font-bold text-red-300">PONTUAÇÃO</span> é o seu resultado final. Respostas erradas <span class="font-bold text-red-300">descontam pontos</span>!
                 </p>
                 <p class="mt-2">
-                    O sistema detectará se você <span class="font-bold">sair desta tela, minimizar o navegador ou tentar capturar a tela</span> durante um desafio.
+                    O sistema detectará se você <span class="font-bold">sair desta tela ou tentar capturá-la</span> durante um <span class="font-bold">DESAFIO</span>.
                     Qualquer tentativa resultará em uma <span class="font-bold text-lg">penalidade de -150 PONTOS</span>. Jogue limpo!
                 </p>
             </div>
-            <div class="flex flex-col md:flex-row gap-4">
-                <input type="text" id="player-name-input" placeholder="Digite seu nome para a classificação..." class="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+
+            <!-- Input de Nome (só aparece se o nome não estiver salvo) -->
+            <div id="name-input-area" class="mb-6">
+                <input type="text" id="player-name-input" placeholder="Digite seu nome para a classificação..." class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+            </div>
+
+            <!-- Botões de Seleção de Jornada -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button id="start-game-btn" class="bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg transition duration-300 shadow-lg">
-                    Começar minha Jornada!
+                    Jornada 1: Pizzaria (Normal)
+                </button>
+                <button id="start-level2-btn-welcome" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg transition duration-300 shadow-lg">
+                    Jornada 2: Oficina (Difícil)
                 </button>
             </div>
         </div>
 
         <!-- === TELA 2: JORNADA (MAPA) === -->
         <div id="journey-screen" class="game-screen">
-            <h2 class="text-2xl font-bold mb-6">Sua Jornada LEAN (Faixa-Branca)</h2>
+            <h2 id="journey-title" class="text-2xl font-bold mb-6">Sua Jornada LEAN (Faixa-Branca)</h2>
             <div id="journey-map" class="space-y-4">
                 <!-- Módulos serão injetados aqui pelo JS -->
             </div>
@@ -210,48 +236,39 @@
 
         <!-- === TELA 6: PONTUAÇÃO FINAL === -->
         <div id="final-screen" class="game-screen text-center">
-            <h2 class="text-3xl font-black mb-4 text-cyan-400">Jornada Concluída!</h2>
+            <h2 id="final-title" class="text-3xl font-black mb-4 text-cyan-400">Jornada Concluída!</h2>
             <p id="final-player-name" class="text-xl font-semibold mb-4"></p>
-            <p class="text-lg text-gray-300 mb-6">
-                Parabéns! Você deu os primeiros passos para se tornar um mestre LEAN.
-                Sua pontuação final reflete seu raciocínio e atenção aos detalhes.
-            </p>
-            <div class="bg-gray-900 border-2 border-cyan-500 rounded-lg p-8 w-full max-w-md mx-auto mb-6 shadow-2xl">
-                <p class="text-lg text-gray-400">Pontuação Total:</p>
-                <p id="final-score" class="text-6xl font-black text-yellow-400"></p>
-                <p id="final-cheats" class="text-sm text-red-400 mt-2"></p>
+            
+            <div id="final-scores-area" class="bg-gray-900 border-2 border-cyan-500 rounded-lg p-8 w-full max-w-md mx-auto mb-6 shadow-2xl">
+                <!-- Pontuações serão injetadas aqui -->
             </div>
-            <p class="text-sm text-gray-500">Atualize a página para jogar novamente.</p>
+            
+            <p id="final-cheats" class="text-sm text-red-400 mb-6"></p>
+            
+            <!-- Botão para Voltar ao Início -->
+            <button id="go-home-btn" class="w-full max-w-sm mx-auto mt-4 bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg transition duration-300 shadow-lg">
+                Voltar ao Início
+            </button>
         </div>
 
     </div> <!-- Fim do Container Principal -->
 
-    <!-- === MODAL ANTI-CHEAT === -->
-    <div id="cheat-modal" class="game-screen fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-        <div class="bg-red-800 border-4 border-red-500 rounded-lg p-8 shadow-2xl text-center max-w-lg">
-            <h2 class="text-3xl font-black text-white mb-4">COMPORTAMENTO SUSPEITO!</h2>
-            <p id="cheat-message" class="text-lg text-red-100 mb-6"></p>
-            <button id="cheat-ok-btn" class="bg-white text-red-800 font-bold py-3 px-8 rounded-lg text-lg">
-                Entendido...
-            </button>
-        </div>
+    <!-- === TOAST ANTI-CHEAT === -->
+    <div id="toast-notification">
+        Mensagem de Teste
     </div>
 
 
     <script>
-        // --- ESTADO DO JOGO ---
-        const gameState = {
-            playerName: "",
-            totalScore: 0,
-            currentModuleId: 1,
-            challengeScore: 0,
-            cheatAttempts: 0,
-            isCheating: false, // Debounce para anti-cheat
-            modules: [
+        // --- BANCO DE DADOS DE JOGOS ---
+        // Contém os dados de todas as jornadas
+        const gameData = {
+            // Nível 1: Pizzaria
+            pizzaria: [
                 { 
                     id: 1, 
                     name: "Módulo 1: Fundamentos LEAN e o 'Valor'", 
-                    status: "locked", // 'locked', 'current', 'completed'
+                    status: "locked",
                     learnTitle: "Módulo 1: O que é 'Valor'?",
                     learnContent: `
                         <p class="text-lg">Bem-vindo ao LEAN (Manufatura Enxuta). Pense no LEAN como uma filosofia para <span class="font-bold text-cyan-300">eliminar desperdícios</span> e focar apenas no que realmente importa.</p>
@@ -279,7 +296,7 @@
                         </ul>
                         <p class="mt-4">No próximo desafio, seu trabalho é provar que você entendeu o que é 'Valor' do ponto de vista do cliente.</p>
                     `,
-                    challengeTitle: "Desafio 1: O que é Valor?",
+                    challengeTitle: "Desafio 1: O que é Valor? (Pizzaria)",
                     challengeTask: "Selecione TODAS as atividades pelas quais um cliente de pizzaria estaria disposto a pagar. (Múltipla escolha)",
                     challengeData: [
                         { text: "Assar a pizza no forno.", isValue: true },
@@ -331,7 +348,27 @@
                     `,
                     challengeTitle: "Desafio 2: Caça aos Desperdícios",
                     challengeTask: "Você tem dois desafios! Primeiro, na Pizzaria. Depois, em um Festival de Música. Classifique cada problema com seu 'Muda' (Desperdício) correspondente.",
-                    // Os dados do desafio 2 estão no JS (setupChallenge2)
+                    challengeData: { // Dados específicos do Desafio 2
+                        pizzaria: [
+                            { q: "O pizzaiolo anda 10 passos para pegar o queijo e 10 para voltar.", a: "Movimentação" },
+                            { q: "A pizza fica pronta e espera 15 min na prateleira pelo motoboy.", a: "Espera" },
+                            { q: "Fizeram 10 pizzas de calabresa 'para adiantar', mas só venderam 2.", a: "Superprodução" },
+                            { q: "A pizza queimou e teve que ser jogada fora e refeita.", a: "Defeitos" },
+                            { q: "O motoboy leva a pilha de massas do freezer para a bancada (do outro lado da loja).", a: "Transporte" },
+                            { q: "Temos 5.000 caixas de pizza paradas no estoque há 3 meses.", a: "Inventário" },
+                            { q: "Colocamos a pizza na caixa, depois na sacola, depois amarramos um laço de fita.", a: "Superprocessamento" }
+                        ],
+                        festival: [
+                            { q: "Compraram 20.000 copos para o evento, mas só 8.000 pessoas apareceram.", a: "Inventário" },
+                            { q: "O caminhão de bebidas descarregou a 500m do bar principal. Tiveram que levar tudo em carrinhos.", a: "Transporte" },
+                            { q: "O técnico de som precisa andar do palco até a mesa de som (no meio do público) toda hora.", a: "Movimentação" },
+                            { q: "A banda 1 terminou, mas a banda 2 está atrasada. O palco fica vazio por 30 min.", a: "Espera" },
+                            { q: "O telão mostra o logo do patrocinador 50x antes do show começar.", a: "Superprocessamento" },
+                            { q: "O microfone do cantor falha no meio do show.", a: "Defeitos" },
+                            { q: "Imprimiram 10.000 panfletos extras que não foram distribuídos.", a: "Superprodução" }
+                        ],
+                        tiposMuda: ["Transporte", "Inventário", "Movimentação", "Espera", "Superprodução", "Superprocessamento", "Defeitos"]
+                    },
                     pointsPerCorrect: 15,
                     pointsPerWrong: -5
                 },
@@ -358,9 +395,46 @@
                         </ul>
                         <p class="mt-4">Seu desafio será aplicar o 5S e o Kaizen na nossa pizzaria.</p>
                     `,
-                    challengeTitle: "Desafio 3: A Grande Arrumação",
+                    challengeTitle: "Desafio 3: A Grande Arrumação (Pizzaria)",
                     challengeTask: "Este desafio tem 3 etapas: Aplicar 'Seiri' (Descarte), 'Seiton' (Organização) e 'Kaizen' (Melhoria).",
-                    // Os dados do desafio 3 estão no JS (setupChallenge3)
+                    challengeData: {
+                        seiri: [
+                            { item: "Rolo de massa", isUseless: false },
+                            { item: "Tomate estragado", isUseless: true },
+                            { item: "Espátula", isUseless: false },
+                            { item: "Celular pessoal do pizzaiolo", isUseless: true },
+                            { item: "Molho de tomate (aberto)", isUseless: false },
+                            { item: "Embalagem de queijo vazia", isUseless: true },
+                            { item: "Queijo ralado", isUseless: false },
+                            { item: "Comanda de pedido de ontem", isUseless: true },
+                            { item: "Farinha", isUseless: false }
+                        ],
+                        seiton: [
+                            { item: "Rolo de massa", local: "Bancada", localCorreto: "Bancada" },
+                            { item: "Molho de tomate (aberto)", local: "Bancada", localCorreto: "Geladeira" },
+                            { item: "Espátula", local: "Perto do Forno", localCorreto: "Perto do Forno" },
+                            { item: "Queijo ralado", local: "Perto do Forno", localCorreto: "Geladeira" },
+                            { item: "Farinha", local: "Geladeira", localCorreto: "Bancada" }
+                        ],
+                        kaizen: [
+                            { 
+                                q: "Problema: O pizzaiolo perde tempo procurando ingredientes na geladeira (Muda: Movimentação).",
+                                options: [
+                                    { text: "Comprar uma geladeira maior e mais moderna.", isBest: false },
+                                    { text: "Etiquetar todas as prateleiras e potes dentro da geladeira.", isBest: true },
+                                    { text: "Contratar um assistente só para pegar coisas na geladeira.", isBest: false }
+                                ]
+                            },
+                            {
+                                q: "Problema: Os motoboys pegam os pedidos errados com frequência (Muda: Defeito).",
+                                options: [
+                                    { text: "Gritar com os motoboys para prestarem mais atenção.", isBest: false },
+                                    { text: "Criar um sistema de prateleiras numeradas (1, 2, 3) e grampear a comanda na sacola.", isBest: true },
+                                    { text: "Dar 50% de desconto para o cliente que receber o pedido errado.", isBest: false }
+                                ]
+                            }
+                        ]
+                    },
                     pointsPerCorrect: 10,
                     pointsPerWrong: -5
                 },
@@ -385,13 +459,222 @@
                             <li><span class="font-bold">Exemplo 3 (Sistema):</span> O sistema do caixa não deixa fechar o pedido se o campo "telefone" não tiver 9 dígitos. Isso previne o erro de anotar telefone errado.</li>
                         </ul>
                     `,
-                    challengeTitle: "Desafio 4: Produção Inteligente",
+                    challengeTitle: "Desafio 4: Produção Inteligente (Pizzaria)",
                     challengeTask: "Desafio em duas etapas: Analise o quadro Kanban e depois crie soluções Poka-Yoke.",
-                    // Os dados do desafio 4 estão no JS (setupChallenge4)
-                    pointsPerCorrect: 25, // Mais pontos para desafios mais difíceis
+                    challengeData: {
+                        kanban: { 
+                            q: "O quadro Kanban da pizzaria está assim. A coluna 'Em Preparo' tem limite de 3 pizzas (WIP=3), mas já tem 5! Qual a AÇÃO LEAN correta a se fazer IMEDIATAMENTE?",
+                            options: [
+                                { text: "Puxar mais 2 pedidos de 'A Fazer' para 'Em Preparo' para adiantar.", isBest: false },
+                                { text: "Focar em mover pizzas de 'Pronto' para 'Entrega' para liberar espaço.", isBest: false },
+                                { text: "PARAR de puxar pedidos de 'A Fazer' e ajudar a mover as 5 pizzas de 'Em Preparo' para 'Assando'.", isBest: true },
+                                { text: "Contratar mais um pizzaiolo para a coluna 'Em Preparo'.", isBest: false }
+                            ]
+                        },
+                        pokaYoke: [
+                            { 
+                                q: "Problema: O pizzaiolo às vezes usa a massa errada (normal vs. integral).",
+                                options: [
+                                    { text: "Treinar o pizzaiolo novamente.", isBest: false },
+                                    { text: "Armazenar as massas em potes de CORES diferentes (Ex: Pote Verde = Integral).", isBest: true },
+                                    { text: "Pesar a massa toda vez antes de usar.", isBest: false }
+                                ]
+                            },
+                            {
+                                q: "Problema: O motoboy esquece de pegar a máquina de cartão.",
+                                options: [
+                                    { text: "Multar o motoboy em R$ 10,00 a cada esquecimento.", isBest: false },
+                                    { text: "Colocar um gancho para a chave da moto em CIMA da máquina de cartão (ele tem que pegar a máquina para pegar a chave).", isBest: true },
+                                    { text: "Ligar para o cliente e perguntar se ele pode pagar em dinheiro.", isBest: false }
+                                ]
+                            }
+                        ]
+                    },
+                    pointsPerCorrect: 25,
                     pointsPerWrong: -10
                 }
+            ],
+            // Nível 2: Oficina Mecânica
+            oficina: [
+                { 
+                    id: 1, 
+                    name: "Módulo 1: O 'Valor' na Oficina", 
+                    status: "locked",
+                    learnTitle: "Módulo 1: O que é 'Valor'? (Nível 2)",
+                    learnContent: `
+                        <p class="text-lg">Bem-vindo à Jornada Nível 2: A Oficina Mecânica. Os conceitos são os mesmos, mas o cenário é novo e mais desafiador.</p>
+                        <p class="font-bold text-xl mt-4">Lembre-se: Valor é o que o CLIENTE paga. Todo o resto é desperdício (Muda).</p>
+                        <h4 class="text-lg font-bold mt-4 text-cyan-300">Exemplos na Oficina:</h4>
+                        <ul class="list-disc list-inside space-y-2 pl-4">
+                            <li>O cliente <span class="text-green-400 font-bold">PAGA</span> por:
+                                <ul class="list-disc list-inside pl-6">
+                                    <li>Diagnóstico correto do problema.</li>
+                                    <li>Peça nova sendo instalada.</li>
+                                    <li>Alinhamento e balanceamento.</li>
+                                </ul>
+                            </li>
+                            <li>O cliente <span class="text-red-400 font-bold">NÃO PAGA</span> para:
+                                <ul class="list-disc list-inside pl-6">
+                                    <li>O mecânico <span class="font-bold">procurar</span> uma ferramenta.</li>
+                                    <li>O carro ficar <span class="font-bold">parado</span> no pátio esperando uma peça chegar.</li>
+                                    <li>O mecânico <span class="font-bold">refazer</span> um conserto que ficou errado.</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    `,
+                    challengeTitle: "Desafio 1: O que é Valor? (Oficina)",
+                    challengeTask: "Nível Difícil: Selecione TODAS as atividades que agregam valor real para o cliente da oficina.",
+                    challengeData: [
+                        { text: "Diagnosticar o barulho do motor com o scanner.", isValue: true },
+                        { text: "Mecânico andando até o almoxarifado buscar um filtro.", isValue: false },
+                        { text: "Instalar as novas pastilhas de freio.", isValue: true },
+                        { text: "Carro parado no pátio esperando a aprovação do orçamento.", isValue: false },
+                        { text: "Procurar a chave de roda correta na caixa de ferramentas.", isValue: false },
+                        { text: "Refazer a troca de óleo porque usaram o óleo errado.", isValue: false },
+                        { text: "Encher o pneu com a calibragem correta.", isValue: true },
+                        { text: "Lavar o carro do cliente (serviço não solicitado e não cobrado).", isValue: false }, // Superprocessamento
+                        { text: "Preencher a ordem de serviço no sistema.", isValue: true } // Necessário para o serviço
+                    ],
+                    pointsPerCorrect: 20,
+                    pointsPerWrong: -15 // Penalidade maior
+                },
+                { 
+                    id: 2, 
+                    name: "Módulo 2: Desperdícios na Oficina", 
+                    status: "locked",
+                    learnTitle: "Módulo 2: O Vilão 'MUDA' (Nível 2)",
+                    learnContent: `
+                        <p class="text-lg">Você já conhece os 7 Desperdícios (T.I.M. W.O.O.D.). Agora, sua tarefa é identificá-los em um ambiente mais complexo.</p>
+                        <p>Lembre-se: <span class="font-bold text-white">Transporte</span> (material), <span class="font-bold text-white">Inventário</span> (estoque), <span class="font-bold text-white">Movimentação</span> (pessoa), <span class="font-bold text-white">Waiting</span> (Espera), <span class="font-bold text-white">Over-production</span> (Superprodução), <span class="font-bold text-white">Over-processing</span> (Superprocessamento) e <span class="font-bold text-white">Defeitos</span>.</p>
+                        <p class="mt-4">Seja rápido e preciso. Os erros aqui custam mais caro.</p>
+                    `,
+                    challengeTitle: "Desafio 2: Caça aos Desperdícios (Oficina)",
+                    challengeTask: "Nível Difícil: Classifique cada problema da oficina com seu 'Muda' (Desperdício) correspondente.",
+                    challengeData: { // Dados específicos
+                        oficina: [
+                            { q: "O mecânico anda 20m para pegar o scanner e 20m para voltar.", a: "Movimentação" },
+                            { q: "O carro está no elevador, mas o mecânico está parado, esperando a peça vir do almoxarifado.", a: "Espera" },
+                            { q: "O mecânico limpou e poliu o motor do cliente, sem ele pedir e sem cobrar.", a: "Superprocessamento" },
+                            { q: "Instalaram a peça errada, o carro falhou e teve que voltar no dia seguinte.", a: "Defeitos" },
+                            { q: "Um funcionário leva o carro do pátio para o elevador, depois para o alinhamento, depois de volta para o pátio.", a: "Transporte" },
+                            { q: "Temos 500 filtros de ar de um modelo de carro que saiu de linha há 5 anos.", a: "Inventário" },
+                            { q: "O mecânico A fez o diagnóstico, o mecânico B vai fazer o conserto e precisa re-diagnosticar.", a: "Defeitos" }, // Ou Superprocessamento
+                            { q: "Compraram 1000L de óleo 10w40 'na promoção', mas a oficina só usa 50L por mês.", a: "Inventário" }
+                        ],
+                        tiposMuda: ["Transporte", "Inventário", "Movimentação", "Espera", "Superprodução", "Superprocessamento", "Defeitos"]
+                    },
+                    pointsPerCorrect: 15,
+                    pointsPerWrong: -10 // Penalidade maior
+                },
+                { 
+                    id: 3, 
+                    name: "Módulo 3: Oficina Kaizen (5S)", 
+                    status: "locked",
+                    learnTitle: "Módulo 3: As Ferramentas da Mudança (Nível 2)",
+                    learnContent: `
+                        <p class="text-lg">Você sabe a teoria do <span class="font-bold text-cyan-300">5S</span> (Seiri, Seiton, Seiso, Seiketsu, Shitsuke) e <span class="font-bold text-cyan-300">KAIZEN</span> (Pequenas melhorias contínuas).</p>
+                        <p>Na oficina, a desorganização (Muda: Movimentação) e os pequenos erros (Muda: Defeitos) são os maiores vilões. Seu desafio é aplicar as soluções corretas.</p>
+                    `,
+                    challengeTitle: "Desafio 3: A Grande Arrumação (Oficina)",
+                    challengeTask: "Nível Difícil (3 etapas): Aplique 'Seiri', 'Seiton' e 'Kaizen' na oficina.",
+                    challengeData: {
+                        seiri: [
+                            { item: "Chave de roda", isUseless: false },
+                            { item: "Peça velha (quebrada) substituída", isUseless: true },
+                            { item: "Scanner de diagnóstico", isUseless: false },
+                            { item: "Lata de refrigerante vazia", isUseless: true },
+                            { item: "Óleo novo (lacrado)", isUseless: false },
+                            { item: "Chave de fenda com a ponta gasta/quebrada", isUseless: true },
+                            { item: "Filtro de ar novo (na caixa)", isUseless: false },
+                            { item: "Pneu furado antigo (irrecuperável)", isUseless: true }
+                        ],
+                        seiton: [
+                            { item: "Scanner de diagnóstico", local: "Na caixa de parafusos", localCorreto: "Carrinho de diagnóstico" },
+                            { item: "Chave de roda", local: "No chão, ao lado do carro", localCorreto: "Painel de ferramentas" },
+                            { item: "Filtro de ar novo", local: "Carrinho de diagnóstico", localCorreto: "Almoxarifado/Prateleira" },
+                            { item: "Torquímetro (ferramenta de precisão)", local: "Painel de ferramentas", localCorreto: "Estojo protegido" }
+                        ],
+                        kaizen: [
+                            { 
+                                q: "Problema: O mecânico perde tempo procurando a chave correta no painel de ferramentas (Muda: Movimentação).",
+                                options: [
+                                    { text: "Comprar um painel de ferramentas 3x maior.", isBest: false },
+                                    { text: "Criar um 'painel de sombra' (desenho) com o contorno de cada ferramenta.", isBest: true },
+                                    { text: "Manter todas as ferramentas em uma única caixa grande.", isBest: false }
+                                ]
+                            },
+                            {
+                                q: "Problema: O mecânico às vezes esquece de apertar todos os 5 parafusos da roda (Muda: Defeito Grave!).",
+                                options: [
+                                    { text: "Dar um bônus se ele acertar, e demitir se errar.", isBest: false },
+                                    { text: "Usar um torquímetro que 'estala' e marcar cada parafuso apertado com caneta (verificação visual).", isBest: true },
+                                    { text: "Pedir para o cliente verificar os parafusos antes de sair.", isBest: false }
+                                ]
+                            }
+                        ]
+                    },
+                    pointsPerCorrect: 15, // Mais pontos
+                    pointsPerWrong: -10
+                },
+                { 
+                    id: 4, 
+                    name: "Módulo 4: Controle de Oficina", 
+                    status: "locked",
+                    learnTitle: "Módulo 4: Controlando o Processo (Nível 2)",
+                    learnContent: `
+                        <p class="text-lg">Vamos aplicar <span class="font-bold text-cyan-300">Kanban</span> e <span class="font-bold text-cyan-300">Poka-Yoke</span> na Oficina.</p>
+                        <p class="font-bold">Kanban:</p> <p>Lembre-se do Limite de Trabalho em Progresso (WIP). Se uma coluna (Ex: 'Aguardando Peça') está cheia, ela é o <span class="font-bold text-red-400">GARGALO</span>. A equipe deve focar em desobstruir o gargalo, e não em puxar mais trabalho.</p>
+                        <p class="font-bold mt-2">Poka-Yoke:</p> <p>Tornar o erro impossível. Em uma oficina, onde um erro pode ser fatal, isso é crucial. Pense em soluções físicas ou de sistema que previnem o erro humano.</p>
+                    `,
+                    challengeTitle: "Desafio 4: Produção Inteligente (Oficina)",
+                    challengeTask: "Nível Difícil (2 etapas): Identifique o gargalo Kanban e crie soluções Poka-Yoke.",
+                    challengeData: {
+                        kanban: { 
+                            q: "O quadro Kanban da oficina tem um GARGALO óbvio. Onde ele está e qual a ação correta para o Gerente?",
+                            options: [
+                                { text: "Gargalo: 'Aguardando Peça'. Ação: Pressionar o almoxarifado/compras para acelerar as peças.", isBest: true },
+                                { text: "Gargalo: 'Diagnóstico'. Ação: Contratar mais mecânicos para o diagnóstico.", isBest: false },
+                                { text: "Gargalo: 'Em Conserto'. Ação: Puxar mais carros da 'Recepção' para não deixar os mecânicos parados.", isBest: false },
+                                { text: "Gargalo: 'Recepção'. Ação: Fazer mais marketing para atrair mais clientes.", isBest: false }
+                            ]
+                        },
+                        pokaYoke: [
+                            { 
+                                q: "Problema: O mecânico às vezes usa o tipo de óleo errado (Ex: 5w30 no lugar de 10w40).",
+                                options: [
+                                    { text: "Pintar as tampas dos galões de óleo com cores diferentes (Azul=5w30, Vermelho=10w40).", isBest: false }, // É Kaizen, mas não Poka-Yoke
+                                    { text: "Usar pistolas de óleo com bicos de encaixe diferentes (o bico '5w30' não encaixa no motor '10w40').", isBest: true },
+                                    { text: "Dar uma bronca severa no mecânico.", isBest: false }
+                                ]
+                            },
+                            {
+                                q: "Problema: Esquecem de devolver a porca de segurança da roda para o cliente (que fica com o carro preso se furar o pneu).",
+                                options: [
+                                    { text: "Colocar a porca em uma bandeja magnética vermelha que deve ser colocada no capô. O mecânico não pode fechar o capô sem tirar a bandeja.", isBest: true },
+                                    { text: "Anotar na comanda 'LEMBRAR DE DEVOLVER A PORCA'.", isBest: false },
+                                    { text: "Cobrar do mecânico uma porca nova se ele esquecer.", isBest: false }
+                                ]
+                            }
+                        ]
+                    },
+                    pointsPerCorrect: 30,
+                    pointsPerWrong: -15
+                }
             ]
+        };
+
+        // --- ESTADO DO JOGO ---
+        const gameState = {
+            playerName: "",
+            totalScore: 0,
+            totalScorePizzaria: 0,
+            totalScoreOficina: 0,
+            currentModuleId: 1,
+            challengeScore: 0,
+            cheatAttempts: 0,
+            isCheating: false, // Debounce
+            toastTimer: null,   // Timer do Toast
+            activeModules: [] // Armazena a jornada atual (Pizzaria ou Oficina)
         };
 
         // --- ELEMENTOS DA DOM ---
@@ -402,14 +685,17 @@
             challenge: document.getElementById('challenge-screen'),
             result: document.getElementById('result-screen'),
             final: document.getElementById('final-screen'),
-            cheatModal: document.getElementById('cheat-modal'),
         };
 
         const ui = {
+            gameTitle: document.getElementById('game-title'),
             playerNameInput: document.getElementById('player-name-input'),
+            nameInputArea: document.getElementById('name-input-area'),
             playerNameDisplay: document.getElementById('player-name-display'),
             startGameBtn: document.getElementById('start-game-btn'),
+            startLevel2BtnWelcome: document.getElementById('start-level2-btn-welcome'), 
             scoreDisplay: document.getElementById('score-display'),
+            journeyTitle: document.getElementById('journey-title'),
             journeyMap: document.getElementById('journey-map'),
             learnTitle: document.getElementById('learn-title'),
             learnContent: document.getElementById('learn-content'),
@@ -423,19 +709,16 @@
             resultMessage: document.getElementById('result-message'),
             resultScore: document.getElementById('result-score'),
             nextModuleBtn: document.getElementById('next-module-btn'),
-            finalScore: document.getElementById('final-score'),
+            finalTitle: document.getElementById('final-title'),
             finalPlayerName: document.getElementById('final-player-name'),
+            finalScoresArea: document.getElementById('final-scores-area'),
             finalCheats: document.getElementById('final-cheats'),
-            cheatMessage: document.getElementById('cheat-message'),
-            cheatOkBtn: document.getElementById('cheat-ok-btn'),
+            goHomeBtn: document.getElementById('go-home-btn'), 
+            toast: document.getElementById('toast-notification'),
         };
 
         // --- FUNÇÕES DE NAVEGAÇÃO ---
 
-        /**
-         * Função de embaralhar (Fisher-Yates)
-         * ANTI-CÓPIA: Garante que os itens apareçam em ordem diferente para cada aluno.
-         */
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -457,17 +740,67 @@
             ui.scoreDisplay.textContent = gameState.totalScore;
         }
 
+        function validateAndSetPlayerName() {
+            if (gameState.playerName === "") {
+                const name = ui.playerNameInput.value.trim();
+                if (name === "") {
+                    ui.playerNameInput.classList.add('border-red-500', 'animate-pulse');
+                    ui.playerNameInput.placeholder = "Por favor, digite seu nome para começar!";
+                    return false;
+                }
+                gameState.playerName = name;
+                ui.playerNameDisplay.textContent = `Iniciado: ${gameState.playerName}`;
+                ui.nameInputArea.style.display = 'none'; 
+            }
+            return true;
+        }
+        
         function startGame() {
-            gameState.playerName = ui.playerNameInput.value.trim() || "Iniciado Anônimo";
-            ui.playerNameDisplay.textContent = `Iniciado: ${gameState.playerName}`;
-            gameState.modules[0].status = 'current'; // Libera o primeiro módulo
+            if (!validateAndSetPlayerName()) return;
+
+            gameState.totalScore = 0; 
+            gameState.currentModuleId = 1;
+            gameState.activeModules = JSON.parse(JSON.stringify(gameData.pizzaria));
+            gameState.activeModules[0].status = 'current'; 
+            
+            ui.journeyTitle.textContent = "Sua Jornada LEAN (Nível 1: Pizzaria)";
+            ui.gameTitle.textContent = "JORNADA LEAN: A PIZZARIA";
+            ui.scoreDisplay.textContent = "0";
+            
+            renderJourneyMap();
+            showScreen('journey');
+        }
+        
+        function startLevel2() {
+            if (!validateAndSetPlayerName()) return;
+            
+            gameState.totalScore = 0; 
+            gameState.currentModuleId = 1;
+            gameState.activeModules = JSON.parse(JSON.stringify(gameData.oficina));
+            gameState.activeModules[0].status = 'current'; 
+
+            ui.journeyTitle.textContent = "Sua Jornada LEAN (Nível 2: Oficina)";
+            ui.gameTitle.textContent = "JORNADA LEAN: A OFICINA";
+            ui.scoreDisplay.textContent = "0";
+            
             renderJourneyMap();
             showScreen('journey');
         }
 
+        function goHome() {
+            gameState.totalScore = 0;
+            gameState.currentModuleId = 1;
+            gameState.activeModules = [];
+            
+            ui.scoreDisplay.textContent = "0";
+            ui.gameTitle.textContent = "JORNADA LEAN";
+            
+            showScreen('welcome');
+        }
+
         function renderJourneyMap() {
             ui.journeyMap.innerHTML = '';
-            gameState.modules.forEach(module => {
+            gameState.activeModules.forEach(module => {
                 const moduleEl = document.createElement('div');
                 moduleEl.className = `journey-module bg-gray-700 p-6 rounded-lg border-4 border-gray-600 transition-all duration-300 ${module.status}`;
                 moduleEl.innerHTML = `
@@ -484,22 +817,20 @@
         }
 
         function selectModule(moduleId) {
-            const module = gameState.modules.find(m => m.id === moduleId);
+            const module = gameState.activeModules.find(m => m.id === moduleId);
             if (!module || module.status !== 'current') return;
 
             ui.learnTitle.textContent = module.learnTitle;
             ui.learnContent.innerHTML = module.learnContent;
-            
-            // Prepara o botão para iniciar o desafio
             ui.startChallengeBtn.onclick = () => startChallenge(moduleId);
             
             showScreen('learn');
         }
 
         function startChallenge(moduleId) {
-            const module = gameState.modules.find(m => m.id === moduleId);
+            const module = gameState.activeModules.find(m => m.id === moduleId);
             gameState.currentModuleId = moduleId;
-            gameState.challengeScore = 0; // Reseta score do desafio
+            gameState.challengeScore = 0; 
 
             ui.challengeTitle.textContent = module.challengeTitle;
             ui.challengeTask.textContent = module.challengeTask;
@@ -509,7 +840,6 @@
             ui.submitChallengeBtn.classList.remove('hidden');
             ui.challengeFeedback.textContent = '';
             
-            // ANTI-AI: O desafio não é texto, é interação de clicar em opções embaralhadas.
             switch (moduleId) {
                 case 1:
                     setupChallenge1(module);
@@ -533,45 +863,59 @@
             ui.resultMessage.textContent = message;
             ui.resultScore.textContent = `${gameState.challengeScore > 0 ? '+' : ''}${gameState.challengeScore}`;
             
-            const module = gameState.modules.find(m => m.id === gameState.currentModuleId);
+            const module = gameState.activeModules.find(m => m.id === gameState.currentModuleId);
             module.status = 'completed';
 
-            // Libera o próximo módulo
-            const nextModule = gameState.modules.find(m => m.id === gameState.currentModuleId + 1);
+            const nextModule = gameState.activeModules.find(m => m.id === gameState.currentModuleId + 1);
             if (nextModule) {
                 nextModule.status = 'current';
                 ui.nextModuleBtn.textContent = "Voltar para a Jornada";
-            } else {
-                ui.nextModuleBtn.textContent = "Ver Pontuação Final";
-            }
-            
-            ui.nextModuleBtn.onclick = () => {
-                if (nextModule) {
+                ui.nextModuleBtn.onclick = () => {
                     renderJourneyMap();
                     showScreen('journey');
-                } else {
-                    showFinalScreen();
-                }
-            };
+                };
+            } else {
+                ui.nextModuleBtn.textContent = "Ver Pontuação Final";
+                ui.nextModuleBtn.onclick = showFinalScreen;
+            }
 
             showScreen('result');
         }
         
         function showFinalScreen() {
-            ui.finalScore.textContent = gameState.totalScore;
             ui.finalPlayerName.textContent = `Iniciado: ${gameState.playerName}`;
-            if (gameState.cheatAttempts > 0) {
-                ui.finalCheats.textContent = `Tentativas de trapaça detectadas: ${gameState.cheatAttempts}`;
+            ui.finalCheats.textContent = gameState.cheatAttempts > 0 ? `Tentativas de trapaça detectadas: ${gameState.cheatAttempts}` : '';
+
+            const isPizzaria = gameState.activeModules[0].name.includes("Pizzaria");
+            
+            if (isPizzaria) {
+                gameState.totalScorePizzaria = gameState.totalScore; 
+                ui.finalTitle.textContent = "Jornada 1 Concluída!";
+            } else {
+                gameState.totalScoreOficina = gameState.totalScore; 
+                ui.finalTitle.textContent = "Jornada 2 Concluída!";
             }
+
+            ui.finalScoresArea.innerHTML = '';
+            if (gameState.totalScorePizzaria > 0 || gameState.activeModules.length === 0) { // Mostra se tiver pontuação ou se estiver voltando da tela de Oficina
+                 ui.finalScoresArea.innerHTML += `
+                    <p class="text-lg text-gray-400">Pontuação (Pizzaria):</p>
+                    <p class="text-4xl font-black text-yellow-400 mb-4">${gameState.totalScorePizzaria}</p>
+                `;
+            }
+            if (gameState.totalScoreOficina > 0) {
+                 ui.finalScoresArea.innerHTML += `
+                    <p class="text-lg text-gray-400">Pontuação (Oficina):</p>
+                    <p class="text-4xl font-black text-yellow-400">${gameState.totalScoreOficina}</p>
+                `;
+            }
+            
             showScreen('final');
         }
 
         // --- LÓGICA DOS DESAFIOS ---
 
-        /**
-         * Desafio 1: O que é Valor?
-         * Tipo: Multi-seleção
-         */
+        // Desafio 1: O que é Valor? (Genérico)
         function setupChallenge1(module) {
             const shuffledData = shuffleArray([...module.challengeData]);
             
@@ -580,129 +924,45 @@
                 ui.challengeArea.appendChild(itemEl);
             });
             
-            ui.submitChallengeBtn.onclick = () => submitChallenge1(module);
-        }
-
-        function submitChallenge1(module) {
-            const options = ui.challengeArea.querySelectorAll('.option-item');
-            const { correct, wrong } = checkMultiSelect(options, 'isValue');
-            
-            const points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
-            updateScore(points);
-            
-            ui.submitChallengeBtn.classList.add('hidden');
-            const message = `Você acertou ${correct} e errou ${wrong}. Lembre-se: Valor é só o que o cliente pagaria!`;
-            setTimeout(() => showResult(true, message), 2000);
+            ui.submitChallengeBtn.onclick = () => {
+                const options = ui.challengeArea.querySelectorAll('.option-item');
+                const { correct, wrong } = checkMultiSelect(options, 'isValue');
+                
+                const points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
+                updateScore(points);
+                
+                ui.submitChallengeBtn.classList.add('hidden');
+                const message = `Você acertou ${correct} e errou ${wrong}. Lembre-se: Valor é só o que o cliente pagaria!`;
+                setTimeout(() => showResult(true, message), 2000);
+            };
         }
         
-        /**
-         * Desafio 2: Os 7 Desperdícios
-         * Tipo: Classificação (Múltipla Escolha por item)
-         */
-        const challenge2Data = {
-            pizzaria: [
-                { q: "O pizzaiolo anda 10 passos para pegar o queijo e 10 para voltar.", a: "Movimentação" },
-                { q: "A pizza fica pronta e espera 15 min na prateleira pelo motoboy.", a: "Espera" },
-                { q: "Fizeram 10 pizzas de calabresa 'para adiantar', mas só venderam 2.", a: "Superprodução" },
-                { q:KA: "A pizza queimou e teve que ser jogada fora e refeita.", a: "Defeitos" },
-                { q: "O motoboy leva a pilha de massas do freezer para a bancada (do outro lado da loja).", a: "Transporte" },
-                { q: "Temos 5.000 caixas de pizza paradas no estoque há 3 meses.", a: "Inventário" },
-                { q: "Colocamos a pizza na caixa, depois na sacola, depois amarramos um laço de fita.", a: "Superprocessamento" },
-                { q: "O atendente precisa digitar o pedido no sistema, depois escrever à mão na comanda.", a: "Superprocessamento" }
-            ],
-            festival: [
-                { q: "Compraram 20.000 copos para o evento, mas só 8.000 pessoas apareceram.", a: "Inventário" },
-                { q: "O caminhão de bebidas descarregou a 500m do bar principal. Tiveram que levar tudo em carrinhos.", a: "Transporte" },
-                { q: "O técnico de som precisa andar do palco até a mesa de som (no meio do público) toda hora.", a: "Movimentação" },
-                { q: "A banda 1 terminou, mas a banda 2 está atrasada. O palco fica vazio por 30 min.", a: "Espera" },
-                { q: "O telão mostra o logo do patrocinador 50x antes do show começar.", a: "Superprocessamento" },
-                { q: "O microfone do cantor falha no meio do show.", a: "Defeitos" },
-                { q: "Imprimiram 10.000 panfletos extras que não foram distribuídos.", a: "Superprodução" }
-            ],
-            tiposMuda: ["Transporte", "Inventário", "Movimentação", "Espera", "Superprodução", "Superprocessamento", "Defeitos"]
-        };
-
+        // Desafio 2: Os 7 Desperdícios (Genérico)
         function setupChallenge2(module) {
-            // Combina os dois sets de desafios e embaralha
-            const allQuestions = [
-                ...shuffleArray(challenge2Data.pizzaria).map(q => ({...q, context: "Na Pizzaria:"})),
-                ...shuffleArray(challenge2Data.festival).map(q => ({...q, context: "No Festival:"}))
-            ];
+            const isPizzaria = module.name.includes("Módulo 2");
+            let allQuestions = [];
             
+            if (isPizzaria) {
+                allQuestions = [
+                    ...shuffleArray(module.challengeData.pizzaria).map(q => ({...q, context: "Na Pizzaria:"})),
+                    ...shuffleArray(module.challengeData.festival).map(q => ({...q, context: "No Festival:"}))
+                ];
+            } else {
+                allQuestions = shuffleArray(module.challengeData.oficina).map(q => ({...q, context: "Na Oficina:"}));
+            }
+            
+            const tiposMuda = module.challengeData.tiposMuda;
+
             allQuestions.forEach((item, index) => {
-                const questionEl = document.createElement('div');
-                questionEl.className = 'bg-gray-700 p-4 rounded-lg border border-gray-600';
-                
-                let optionsHTML = '';
-                // ANTI-CÓPIA: As opções de resposta também são embaralhadas
-                const shuffledOptions = shuffleArray([...challenge2Data.tiposMuda]);
-                
-                shuffledOptions.forEach(opt => {
-                    optionsHTML += `
-                        <label class="inline-flex items-center m-1">
-                            <input type="radio" name="q_${index}" value="${opt}" class="form-radio text-cyan-500 bg-gray-800 border-gray-600">
-                            <span class="ml-2 text-sm">${opt}</span>
-                        </label>
-                    `;
-                });
-                
-                questionEl.innerHTML = `
-                    <p class="font-semibold mb-2"><span class="text-sm text-cyan-300">${item.context}</span> ${item.q}</p>
-                    <div class="flex flex-wrap">${optionsHTML}</div>
-                `;
-                questionEl.dataset.answer = item.a;
+                const questionEl = createRadioQuestion(item, index, 'q', null); // dataAttribute (isBest) não é necessário aqui
+                questionEl.dataset.answer = item.a; // Marcador para Módulo 2
                 ui.challengeArea.appendChild(questionEl);
             });
             
-            ui.submitChallengeBtn.onclick = () => submitChallengeRadio(module, 'answer');
+            ui.submitChallengeBtn.onclick = () => submitChallengeRadio(module);
         }
 
-        /**
-         * Desafio 3: 5S e Kaizen
-         * Tipo: Múltiplas etapas
-         */
-        
-        // Dados para o Desafio 3
-        const challenge3Data = {
-            seiri: [
-                { item: "Rolo de massa", isUseless: false },
-                { item: "Tomate estragado", isUseless: true },
-                { item: "Espátula", isUseless: false },
-                { item: "Celular pessoal do pizzaiolo", isUseless: true },
-                { item: "Molho de tomate (aberto)", isUseless: false },
-                { item: "Embalagem de queijo vazia", isUseless: true },
-                { item: "Queijo ralado", isUseless: false },
-                { item: "Comanda de pedido de ontem", isUseless: true },
-                { item: "Farinha", isUseless: false }
-            ],
-            seiton: [
-                { item: "Rolo de massa", local: "Bancada", localCorreto: "Bancada" },
-                { item: "Molho de tomate (aberto)", local: "Bancada", localCorreto: "Geladeira" },
-                { item: "Espátula", local: "Perto do Forno", localCorreto: "Perto do Forno" },
-                { item: "Queijo ralado", local: "Perto do Forno", localCorreto: "Geladeira" },
-                { item: "Farinha", local: "Geladeira", localCorreto: "Bancada" }
-            ],
-            kaizen: [
-                { 
-                    q: "Problema: O pizzaiolo perde tempo procurando ingredientes na geladeira (Muda: Movimentação).",
-                    options: [
-                        { text: "Comprar uma geladeira maior e mais moderna.", isBest: false },
-                        { text: "Etiquetar todas as prateleiras e potes dentro da geladeira.", isBest: true },
-                        { text: "Contratar um assistente só para pegar coisas na geladeira.", isBest: false }
-                    ]
-                },
-                {
-                    q: "Problema: Os motoboys pegam os pedidos errados com frequência (Muda: Defeito).",
-                    options: [
-                        { text: "Gritar com os motoboys para prestarem mais atenção.", isBest: false },
-                        { text: "Criar um sistema de prateleiras numeradas (1, 2, 3) e grampear a comanda na sacola.", isBest: true },
-                        { text: "Dar 50% de desconto para o cliente que receber o pedido errado.", isBest: false }
-                    ]
-                }
-            ]
-        };
-
-        // Gerencia as 3 etapas do Desafio 3
+        // Desafio 3: 5S e Kaizen (Genérico)
         function setupChallenge3(module) {
             runChallenge3Step(1, module);
         }
@@ -710,11 +970,11 @@
         function runChallenge3Step(step, module) {
             ui.challengeArea.innerHTML = '';
             ui.challengeFeedback.textContent = '';
-            ui.submitChallengeBtn.classList.remove('hidden'); // *** CORREÇÃO DO BUG ***
+            ui.submitChallengeBtn.classList.remove('hidden'); 
             
-            if (step === 1) { // Etapa 1: Seiri (Descarte)
-                ui.challengeTask.textContent = "Etapa 1: SEIRI (Utilização). A bancada está uma bagunça. Clique em TODOS os itens que são inúteis e devem ser JOGADOS FORA.";
-                const shuffledData = shuffleArray([...challenge3Data.seiri]);
+            if (step === 1) { // Etapa 1: Seiri
+                ui.challengeTask.textContent = "Etapa 1: SEIRI (Utilização). Clique em TODOS os itens que são inúteis e devem ser JOGADOS FORA.";
+                const shuffledData = shuffleArray([...module.challengeData.seiri]);
                 
                 shuffledData.forEach(item => {
                     const itemEl = createOptionItem(item.item, { 'isUseless': item.isUseless });
@@ -728,17 +988,17 @@
                     updateScore(points);
                     
                     ui.challengeFeedback.textContent = `Seiri: ${correct} itens inúteis identificados!`;
-                    ui.submitChallengeBtn.classList.add('hidden'); // Esconde botão durante transição
-                    setTimeout(() => runChallenge3Step(2, module), 2500); // Próxima etapa
+                    ui.submitChallengeBtn.classList.add('hidden'); 
+                    setTimeout(() => runChallenge3Step(2, module), 2500); 
                 };
 
-            } else if (step === 2) { // Etapa 2: Seiton (Organização)
-                ui.challengeTask.textContent = "Etapa 2: SEITON (Organização). Dos itens úteis que sobraram, alguns estão no lugar errado. Clique em TODOS os itens que estão no LOCAL ERRADO.";
-                const shuffledData = shuffleArray([...challenge3Data.seiton]);
+            } else if (step === 2) { // Etapa 2: Seiton
+                ui.challengeTask.textContent = "Etapa 2: SEITON (Organização). Clique em TODOS os itens que estão no LOCAL ERRADO.";
+                const shuffledData = shuffleArray([...module.challengeData.seiton]);
                 
                 shuffledData.forEach(item => {
                     const isWrongPlace = item.local !== item.localCorreto;
-                    const itemEl = createOptionItem(`${item.item} (está na: ${item.local})`, { 'isWrongPlace': isWrongPlace });
+                    const itemEl = createOptionItem(`${item.item} (está em: ${item.local})`, { 'isWrongPlace': isWrongPlace });
                     ui.challengeArea.appendChild(itemEl);
                 });
                 
@@ -749,68 +1009,25 @@
                     updateScore(points);
                     
                     ui.challengeFeedback.textContent = `Seiton: ${correct} itens no lugar errado identificados!`;
-                    ui.submitChallengeBtn.classList.add('hidden'); // Esconde botão durante transição
-                    setTimeout(() => runChallenge3Step(3, module), 2500); // Próxima etapa
+                    ui.submitChallengeBtn.classList.add('hidden'); 
+                    setTimeout(() => runChallenge3Step(3, module), 2500); 
                 };
 
-            } else if (step === 3) { // Etapa 3: Kaizen (Melhoria)
+            } else if (step === 3) { // Etapa 3: Kaizen
                 ui.challengeTask.textContent = "Etapa 3: KAIZEN (Melhoria). Escolha a MELHOR solução (pequena, barata, inteligente) para cada problema.";
                 
-                shuffleArray([...challenge3Data.kaizen]).forEach((item, index) => {
+                shuffleArray([...module.challengeData.kaizen]).forEach((item, index) => {
                     const questionEl = createRadioQuestion(item, index, 'k', 'isBest');
                     ui.challengeArea.appendChild(questionEl);
                 });
 
                 ui.submitChallengeBtn.onclick = () => {
-                    submitChallengeRadio(module, 'isBest');
+                    submitChallengeRadio(module);
                 };
             }
         }
         
-        /**
-         * Desafio 4: Kanban e Poka-Yoke
-         * Tipo: Múltiplas etapas
-         */
-        
-        // Dados para o Desafio 4
-        const challenge4Data = {
-            kanban: { 
-                q: "O quadro Kanban da pizzaria está assim. A coluna 'Em Preparo' tem limite de 3 pizzas (WIP=3), mas já tem 5! Qual a AÇÃO LEAN correta a se fazer IMEDIATAMENTE?",
-                options: [
-                    { text: "Puxar mais 2 pedidos de 'A Fazer' para 'Em Preparo' para adiantar.", isBest: false },
-                    { text: "Focar em mover pizzas de 'Pronto' para 'Entrega' para liberar espaço.", isBest: false },
-                    { text: "PARAR de puxar pedidos de 'A Fazer' e ajudar a mover as 5 pizzas de 'Em Preparo' para 'Assando'.", isBest: true },
-                    { text: "Contratar mais um pizzaiolo para a coluna 'Em Preparo'.", isBest: false }
-                ]
-            },
-            pokaYoke: [
-                { 
-                    q: "Problema: O pizzaiolo às vezes usa a massa errada (normal vs. integral).",
-                    options: [
-                        { text: "Treinar o pizzaiolo novamente.", isBest: false },
-                        { text: "Armazenar as massas em potes de CORES diferentes (Ex: Pote Verde = Integral).", isBest: true },
-                        { text: "Pesar a massa toda vez antes de usar.", isBest: false }
-                    ]
-                },
-                {
-                    q: "Problema: O motoboy esquece de pegar a máquina de cartão.",
-                    options: [
-                        { text: "Multar o motoboy em R$ 10,00 a cada esquecimento.", isBest: false },
-                        { text: "Colocar um gancho para a chave da moto em CIMA da máquina de cartão (ele tem que pegar a máquina para pegar a chave).", isBest: true },
-                        { text: "Ligar para o cliente e perguntar se ele pode pagar em dinheiro.", isBest: false }
-                    ]
-                },
-                {
-                    q: "Problema: O sistema permite agendar entregas para bairros que não atendemos.",
-                    options: [
-                        { text: "O sistema deve ter uma lista de CEPs válidos e bloquear pedidos de CEPs fora da lista.", isBest: true },
-                        { text: "Imprimir um mapa gigante na parede para o atendente consultar.", isBest: false },
-                        { text: "Ligar para o cliente após o pedido e cancelar se for no bairro errado.", isBest: false }
-                    ]
-                }
-            ]
-        };
-        
+        // Desafio 4: Kanban e Poka-Yoke (Genérico)
         function setupChallenge4(module) {
             runChallenge4Step(1, module);
         }
@@ -819,64 +1036,71 @@
             ui.challengeArea.innerHTML = '';
             ui.challengeFeedback.textContent = '';
             ui.submitChallengeBtn.classList.remove('hidden');
+            const isPizzaria = module.name.includes("Módulo 4");
 
             if (step === 1) { // Etapa 1: Kanban
                 ui.challengeTask.textContent = "Etapa 1: KANBAN (Gestão Visual).";
                 
-                // Desenha o quadro Kanban
-                const kanbanHTML = `
-                    <div class="kanban-board mb-4">
-                        <div class="kanban-column">
-                            <div class="kanban-column-title">A Fazer (WIP: ∞)</div>
-                            <div class="kanban-card">Pedido #101</div>
-                            <div class="kanban-card">Pedido #102</div>
-                            <div class="kanban-card">Pedido #103</div>
-                        </div>
-                        <div class="kanban-column bottleneck">
-                            <div class="kanban-column-title">Em Preparo (WIP: 3)</div>
-                            <div class="kanban-card">Pedido #096</div>
-                            <div class="kanban-card">Pedido #097</div>
-                            <div class="kanban-card">Pedido #098</div>
-                            <div class="kanban-card">Pedido #099</div>
-                            <div class="kanban-card">Pedido #100</div>
-                        </div>
-                        <div class="kanban-column">
-                            <div class="kanban-column-title">Assando (WIP: 2)</div>
-                            <div class="kanban-card">Pedido #095</div>
-                        </div>
-                        <div class="kanban-column">
-                            <div class="kanban-column-title">Pronto (WIP: 5)</div>
-                            <div class="kanban-card">Pedido #094</div>
-                        </div>
-                    </div>
-                `;
+                let kanbanHTML = '';
+                if (isPizzaria) {
+                    kanbanHTML = `
+                        <div class="kanban-board mb-4">
+                            <div class="kanban-column"><div class="kanban-column-title">A Fazer (WIP: ∞)</div><div class="kanban-card">Pedido #101</div><div class="kanban-card">Pedido #102</div></div>
+                            <div class="kanban-column bottleneck"><div class="kanban-column-title">Em Preparo (WIP: 3)</div><div class="kanban-card">#096</div><div class="kanban-card">#097</div><div class="kanban-card">#098</div><div class="kanban-card">#099</div><div class="kanban-card">#100</div></div>
+                            <div class="kanban-column"><div class="kanban-column-title">Assando (WIP: 2)</div><div class="kanban-card">#095</div></div>
+                            <div class="kanban-column"><div class="kanban-column-title">Pronto (WIP: 5)</div><div class="kanban-card">#094</div></div>
+                        </div>`;
+                } else {
+                    kanbanHTML = `
+                        <div class="kanban-board mb-4">
+                            <div class="kanban-column"><div class="kanban-column-title">Recepção (WIP: ∞)</div><div class="kanban-card">Carro A</div><div class="kanban-card">Carro B</div></div>
+                            <div class="kanban-column"><div class="kanban-column-title">Diagnóstico (WIP: 2)</div><div class="kanban-card">Carro C</div></div>
+                            <div class="kanban-column bottleneck"><div class="kanban-column-title">Aguardando Peça (WIP: 4)</div><div class="kanban-card">Carro D</div><div class="kanban-card">Carro E</div><div class="kanban-card">Carro F</div><div class="kanban-card">Carro G</div><div class="kanban-card">Carro H</div></div>
+                            <div class="kanban-column"><div class="kanban-column-title">Em Conserto (WIP: 3)</div><div class="kanban-card">Carro I</div></div>
+                        </div>`;
+                }
                 ui.challengeArea.innerHTML += kanbanHTML;
                 
-                // Adiciona a pergunta
-                const qData = challenge4Data.kanban;
+                const qData = module.challengeData.kanban;
                 const questionEl = createRadioQuestion(qData, 1, 'k', 'isBest');
                 ui.challengeArea.appendChild(questionEl);
                 
+                // [CORRIGIDO] Onclick específico para M4-S1
                 ui.submitChallengeBtn.onclick = () => {
-                    const { correct, wrong } = checkRadioAnswers(module, 'isBest');
-                    const points = (correct * (module.pointsPerCorrect + 25)) + (wrong * module.pointsPerWrong); // Bonus
+                    const { correct, wrong, total } = checkRadioAnswers(module);
+                    
+                    if (total === 0) {
+                        console.error("M4-S1: checkRadioAnswers encontrou 0 perguntas.");
+                        return; // Evita travar
+                    }
+                    
+                    let points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
+                    
+                    // Adiciona bônus do Kanban se acertar
+                    if (correct > 0) {
+                        points += 25; 
+                    }
+                    
                     updateScore(points);
                     
-                    ui.challengeFeedback.textContent = `Kanban: ${correct > 0 ? 'Gargalo identificado!' : 'Não identificou o gargalo!'}`;
+                    ui.challengeFeedback.textContent = `Kanban: ${correct > 0 ? 'Gargalo identificado! (+25 pts Bônus)' : 'Não identificou o gargalo!'}`;
                     ui.submitChallengeBtn.classList.add('hidden');
+                    
+                    // [CORRIGIDO] Chama a próxima etapa
                     setTimeout(() => runChallenge4Step(2, module), 3000);
                 };
 
             } else if (step === 2) { // Etapa 2: Poka-Yoke
                 ui.challengeTask.textContent = "Etapa 2: POKA-YOKE (À Prova de Erros). Escolha a MELHOR solução à prova de erros.";
                 
-                shuffleArray([...challenge4Data.pokaYoke]).forEach((item, index) => {
+                shuffleArray([...module.challengeData.pokaYoke]).forEach((item, index) => {
                     const questionEl = createRadioQuestion(item, index, 'p', 'isBest');
                     ui.challengeArea.appendChild(questionEl);
                 });
 
+                // [CORRIGIDO] Chama o handler final
                 ui.submitChallengeBtn.onclick = () => {
-                    submitChallengeRadio(module, 'isBest');
+                    submitChallengeRadio(module);
                 };
             }
         }
@@ -884,7 +1108,6 @@
         
         // --- Funções Auxiliares de Desafio (Genéricas) ---
         
-        // Auxiliar para criar um item de multi-seleção
         function createOptionItem(text, dataAttributes) {
             const itemEl = document.createElement('div');
             itemEl.className = 'option-item bg-gray-700 p-4 rounded-lg cursor-pointer border-2 border-gray-600';
@@ -898,7 +1121,6 @@
             return itemEl;
         }
         
-        // Auxiliar para checar um desafio de multi-seleção
         function checkMultiSelect(options, dataAttribute) {
             let correct = 0;
             let wrong = 0;
@@ -914,7 +1136,7 @@
                     wrong++;
                     opt.classList.add('wrong');
                 } else if (isCorrect && !isSelected) {
-                    wrong++; // Penaliza por não selecionar um item correto
+                    wrong++;
                     opt.classList.add('wrong');
                 }
                 opt.classList.add('disabled');
@@ -924,7 +1146,6 @@
             return { correct, wrong };
         }
 
-        // Auxiliar para criar uma questão de radio-button
         function createRadioQuestion(item, index, namePrefix, dataAttribute) {
             const questionEl = document.createElement('div');
             questionEl.className = 'bg-gray-700 p-4 rounded-lg border border-gray-600';
@@ -940,135 +1161,151 @@
             });
             
             questionEl.innerHTML = `<p class="font-semibold mb-2">${item.q}</p><div>${optionsHTML}</div>`;
-            questionEl.dataset[dataAttribute] = 'true'; // Marcador para a pergunta
             
-            if (item.a) { // Para Desafio 2
-                questionEl.dataset.answer = item.a;
+            // Marcador para encontrar a pergunta
+            if (dataAttribute === 'isBest') {
+                questionEl.dataset.isBest = 'true';
             }
+            // data-answer (para M2) é adicionado na função setupChallenge2
             return questionEl;
         }
         
-        // Auxiliar para checar um desafio de radio-button
-        function checkRadioAnswers(module, dataAttribute) {
+        /**
+         * [BUG CORRIGIDO] Checa desafios de radio button (M2, M3.3, M4.1, M4.2)
+         */
+        function checkRadioAnswers(module) {
             let correctSelections = 0;
             let wrongSelections = 0;
-            const questions = ui.challengeArea.querySelectorAll(`div[data-${dataAttribute}="true"]`);
-            
-            questions.forEach(q => {
-                const selectedInput = q.querySelector(`input[type="radio"]:checked`);
-                q.querySelectorAll('input').forEach(inp => inp.disabled = true);
-                
-                const isMultiStepAnswer = dataAttribute === 'isBest';
-                const correctAnswerValue = isMultiStepAnswer ? 'true' : q.dataset.answer;
-                const correctEl = isMultiStepAnswer ? 
-                                  q.querySelector(`input[value="true"]`) : 
-                                  q.querySelector(`input[value="${correctAnswerValue}"]`);
+            let questions = [];
 
-                if (selectedInput) {
-                    if (selectedInput.value === correctAnswerValue) {
-                        correctSelections++;
-                        selectedInput.parentElement.classList.add('text-green-400', 'font-bold');
+            if (module.id === 2) {
+                // Módulo 2 (Muda)
+                questions = ui.challengeArea.querySelectorAll('div[data-answer]');
+                questions.forEach(q => {
+                    const selectedInput = q.querySelector('input[type="radio"]:checked');
+                    const correctAnswerValue = q.dataset.answer;
+                    const correctEl = q.querySelector(`input[value="${CSS.escape(correctAnswerValue)}"]`);
+                    
+                    q.querySelectorAll('input').forEach(inp => inp.disabled = true);
+                    if (selectedInput) {
+                        if (selectedInput.value === correctAnswerValue) {
+                            correctSelections++;
+                            selectedInput.parentElement.classList.add('text-green-400', 'font-bold');
+                        } else {
+                            wrongSelections++;
+                            selectedInput.parentElement.classList.add('text-red-400', 'line-through');
+                            if (correctEl) correctEl.parentElement.classList.add('text-green-400', 'font-bold');
+                        }
                     } else {
                         wrongSelections++;
-                        selectedInput.parentElement.classList.add('text-red-400', 'line-through');
-                        if(correctEl) correctEl.parentElement.classList.add('text-green-400', 'font-bold');
+                        if (correctEl) correctEl.parentElement.classList.add('text-green-400', 'font-bold');
                     }
-                } else {
-                    wrongSelections++; // Penaliza por não responder
-                    if(correctEl) correctEl.parentElement.classList.add('text-green-400', 'font-bold');
-                }
-            });
+                });
+            } else if (module.id === 3 || module.id === 4) {
+                // Módulo 3 (Kaizen) e Módulo 4 (Kanban, Poka-Yoke)
+                questions = ui.challengeArea.querySelectorAll('div[data-isBest="true"]');
+                questions.forEach(q => {
+                    const selectedInput = q.querySelector('input[type="radio"]:checked');
+                    const correctAnswerValue = 'true';
+                    const correctEl = q.querySelector(`input[value="true"]`);
+
+                    q.querySelectorAll('input').forEach(inp => inp.disabled = true);
+                    if (selectedInput) {
+                        if (selectedInput.value === correctAnswerValue) {
+                            correctSelections++;
+                            selectedInput.parentElement.classList.add('text-green-400', 'font-bold');
+                        } else {
+                            wrongSelections++;
+                            selectedInput.parentElement.classList.add('text-red-400', 'line-through');
+                            if (correctEl) correctEl.parentElement.classList.add('text-green-400', 'font-bold');
+                        }
+                    } else {
+                        wrongSelections++;
+                        if (correctEl) correctEl.parentElement.classList.add('text-green-400', 'font-bold');
+                    }
+                });
+            }
             
             return { correct: correctSelections, wrong: wrongSelections, total: questions.length };
         }
 
-        // Função de submissão genérica para radio-buttons (Desafios 2, 3.3, 4.1, 4.2)
-        function submitChallengeRadio(module, dataAttribute) {
-            const dataName = dataAttribute === 'isBest' ? 'isBest' : 'answer';
-            const { correct, wrong, total } = checkRadioAnswers(module, dataName);
+
+        /**
+         * [CORRIGIDO] Submissão genérica para radio-buttons (Desafios 2, 3.3, 4.2)
+         */
+        function submitChallengeRadio(module) {
+            const { correct, wrong, total } = checkRadioAnswers(module);
             
-            let points;
-            if (module.id === 4 && dataAttribute === 'isBest') { // Desafio 4 Poka-Yoke
-                points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
-            } else {
-                points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
+            if (total === 0) {
+                 console.error(`submitChallengeRadio (M${module.id}): checkRadioAnswers encontrou 0 perguntas.`);
+                 return; // Evita travar
             }
+
+            let points = (correct * module.pointsPerCorrect) + (wrong * module.pointsPerWrong);
+            
             updateScore(points);
             
             ui.submitChallengeBtn.classList.add('hidden');
             const message = `Você acertou ${correct} de ${total}.`;
-            setTimeout(() => showResult(true, message), 4000); // Mais tempo para revisar
+            setTimeout(() => showResult(true, message), 4000); 
         }
 
 
         // --- FUNÇÕES ANTI-CHEAT ---
         
+        function showToast(message) {
+            if (gameState.toastTimer) {
+                clearTimeout(gameState.toastTimer);
+            }
+            ui.toast.textContent = message;
+            ui.toast.classList.add('active');
+            gameState.toastTimer = setTimeout(() => {
+                ui.toast.classList.remove('active');
+            }, 3000);
+        }
+
         function handleCheat() {
-            // Só ativa se estiver na tela de desafio E não tiver sido pego nos últimos 3s
-            if (!screens.challenge.classList.contains('active') || gameState.isCheating) {
+            if (!screens.challenge.classList.contains('active')) {
                 return;
             }
+            if (gameState.isCheating) {
+                return;
+            }
+            
             gameState.isCheating = true;
             gameState.cheatAttempts++;
-            updateScore(-150); // Penalidade pesada
+            updateScore(-150); 
             
-            showCheatWarning(`Atenção! Sair da tela ou tentar capturá-la é contra as regras. Penalidade: -150 Pontos.`);
+            showToast("COMPORTAMENTO SUSPEITO! Penalidade: -150 Pontos");
             
-            // Trava o debounce
             setTimeout(() => {
                 gameState.isCheating = false;
-            }, 3000); // 3 segundos de cooldown
-        }
-
-        function showCheatWarning(message) {
-            ui.cheatMessage.textContent = message;
-            screens.cheatModal.classList.add('active');
-        }
-
-        function hideCheatWarning() {
-            screens.cheatModal.classList.remove('active');
+            }, 3000); 
         }
 
 
         // --- INICIALIZAÇÃO E EVENTOS ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Botão de Iniciar Jogo
-            ui.startGameBtn.addEventListener('click', () => {
-                if (ui.playerNameInput.value.trim() === "") {
-                    ui.playerNameInput.classList.add('border-red-500', 'animate-pulse');
-                    ui.playerNameInput.placeholder = "Por favor, digite seu nome para começar!";
-                    return;
-                }
-                startGame();
-            });
+            // Botão de Iniciar Jogo (Nível 1)
+            ui.startGameBtn.addEventListener('click', startGame);
             
-            // Botão OK do Modal Anti-Cheat
-            ui.cheatOkBtn.onclick = hideCheatWarning;
+            // Botão de Iniciar Nível 2
+            ui.startLevel2BtnWelcome.addEventListener('click', startLevel2);
 
+            // Botão de Voltar ao Início (Tela Final)
+            ui.goHomeBtn.addEventListener('click', goHome);
+            
             // --- Eventos Anti-Cheat ---
-            
-            // 1. Sair da Aba/Janela
             document.addEventListener('visibilitychange', () => {
-                if (document.hidden) {
-                    handleCheat();
-                }
+                if (document.hidden) handleCheat();
             });
-            
-            // 2. Perda de Foco (Alternar Janela)
             window.addEventListener('blur', handleCheat);
-            
-            // 3. Desativar Menu de Contexto (Botão Direito)
             document.addEventListener('contextmenu', e => e.preventDefault());
-
-            // 4. Detectar Print Screen
             document.addEventListener('keydown', e => {
-                // Tecla "PrintScreen"
                 if (e.key === 'PrintScreen') {
-                    e.preventDefault(); // Impede a captura
+                    e.preventDefault(); 
                     handleCheat();
                 }
-                
-                // Atalhos comuns de captura (Cmd+Shift+3/4, Ctrl+Shift+S, etc.)
                 if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
                     if (['3', '4', 's', 'S'].includes(e.key)) {
                         e.preventDefault();
@@ -1081,5 +1318,4 @@
     </script>
 </body>
 </html>
-
 
