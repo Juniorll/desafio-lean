@@ -725,8 +725,8 @@
         function shuffleArray(array) {
             // Verifica se o array é válido
             if (!array || !array.length) {
-                console.error("shuffleArray foi chamado com um array nulo ou inválido:", array);
-                return array; // Retorna o array original (ou nulo) para evitar travamento
+                // console.error("shuffleArray foi chamado com um array nulo ou inválido:", array);
+                return []; // Retorna um array vazio para evitar travamento
             }
             
             // Cria uma cópia para não modificar o original
@@ -822,6 +822,10 @@
 
         function renderJourneyMap() {
             ui.journeyMap.innerHTML = '';
+            // Garante que activeModules é um array
+            if (!Array.isArray(gameState.activeModules)) {
+                gameState.activeModules = [];
+            }
             gameState.activeModules.forEach(module => {
                 const moduleEl = document.createElement('div');
                 moduleEl.className = `journey-module bg-gray-700 p-6 rounded-lg border-4 border-gray-600 transition-all duration-300 ${module.status}`;
@@ -952,7 +956,7 @@
             
             // Mostra a pontuação da Pizzaria se ela tiver sido jogada
             // Adiciona verificação se a pontuação é realmente maior que zero ou se foi a jornada jogada
-            if (gameState.totalScorePizzaria !== 0 || isPizzaria) {
+            if (gameState.totalScorePizzaria !== 0 || (isPizzaria && gameState.totalScoreOficina === 0)) {
                  ui.finalScoresArea.innerHTML += `
                     <p class="text-lg text-gray-400">Pontuação (Pizzaria):</p>
                     <p class="text-4xl font-black text-yellow-400 mb-4">${gameState.totalScorePizzaria}</p>
@@ -1013,6 +1017,7 @@
          * Desafio 2: Os 7 Desperdícios (Genérico)
          */
         function setupChallenge2(module) {
+            // [CORREÇÃO] Verifica o título da JORNADA, não do desafio, para segurança
             const isPizzaria = ui.journeyTitle.textContent.includes("Pizzaria");
             let allQuestions = [];
             
@@ -1177,15 +1182,24 @@
                 ui.challengeTask.textContent = "Etapa 1: KANBAN (Gestão Visual).";
                 
                 let kanbanHTML = '';
-                // Kanban HTML (simplificado para brevidade, lógica original mantida)
-                 if (isPizzaria) {
-                    kanbanHTML = `<div class="kanban-board mb-4">...</div>`; // Conteúdo original omitido
+                if (isPizzaria) {
+                    kanbanHTML = `
+                        <div class="kanban-board mb-4">
+                            <div class="kanban-column"><div class="kanban-column-title">A Fazer (WIP: ∞)</div><div class="kanban-card">Pedido #101</div><div class="kanban-card">Pedido #102</div></div>
+                            <div class="kanban-column bottleneck"><div class="kanban-column-title">Em Preparo (WIP: 3)</div><div class="kanban-card">#096</div><div class="kanban-card">#097</div><div class="kanban-card">#098</div><div class="kanban-card">#099</div><div class="kanban-card">#100</div></div>
+                            <div class="kanban-column"><div class="kanban-column-title">Assando (WIP: 2)</div><div class="kanban-card">#095</div></div>
+                            <div class="kanban-column"><div class="kanban-column-title">Pronto (WIP: 5)</div><div class="kanban-card">#094</div></div>
+                        </div>`;
                 } else {
-                    kanbanHTML = `<div class="kanban-board mb-4">...</div>`; // Conteúdo original omitido
+                    kanbanHTML = `
+                        <div class="kanban-board mb-4">
+                            <div class="kanban-column"><div class="kanban-column-title">Recepção (WIP: ∞)</div><div class="kanban-card">Carro A</div><div class="kanban-card">Carro B</div></div>
+                            <div class="kanban-column"><div class="kanban-column-title">Diagnóstico (WIP: 2)</div><div class="kanban-card">Carro C</div></div>
+                            <div class="kanban-column bottleneck"><div class="kanban-column-title">Aguardando Peça (WIP: 4)</div><div class="kanban-card">Carro D</div><div class="kanban-card">Carro E</div><div class="kanban-card">Carro F</div><div class="kanban-card">Carro G</div><div class="kanban-card">Carro H</div></div>
+                            <div class="kanban-column"><div class="kanban-column-title">Em Conserto (WIP: 3)</div><div class="kanban-card">Carro I</div></div>
+                        </div>`;
                 }
-                // Adiciona o HTML do Kanban (se existir)
-                 // ui.challengeArea.innerHTML += kanbanHTML; // Renderização original omitida para clareza
-                 // A lógica original de renderização do Kanban está OK.
+                ui.challengeArea.innerHTML += kanbanHTML;
 
 
                 const qData = challengeData.kanban;
@@ -1356,12 +1370,25 @@
                      return { correct: 0, wrong: 0, total: 0 };
                 }
 
+                // [CORREÇÃO APLICADA] Iterar pelos filhos em vez de usar querySelectorAll
+                const allChildren = ui.challengeArea.children;
+                questions = []; // Reseta o array de perguntas
+                for (let i = 0; i < allChildren.length; i++) {
+                    const child = allChildren[i];
+                    // Garante que 'child' é um elemento e tem 'dataset'
+                    if (child && child.dataset) { 
+                        const isM2Question = module.id === 2 && child.hasAttribute('data-answer');
+                        const isM3orM4Question = (module.id === 3 || module.id === 4) && child.hasAttribute('data-isBest') && child.dataset.isBest === 'true';
 
-                const questionSelector = (module.id === 2) ? 'div[data-answer]' : 'div[data-isBest="true"]';
-                questions = ui.challengeArea.querySelectorAll(questionSelector);
+                        if (isM2Question || isM3orM4Question) {
+                            questions.push(child);
+                        }
+                    }
+                }
+                // Fim da [CORREÇÃO APLICADA]
 
                  if (!questions || questions.length === 0) {
-                     console.warn(`Nenhuma pergunta encontrada para M${module.id} com seletor "${questionSelector}"`);
+                     console.warn(`Nenhuma pergunta encontrada para M${module.id} iterando children.`);
                      return { correct: 0, wrong: 0, total: 0 };
                  }
 
@@ -1416,12 +1443,6 @@
              try { // Adiciona try...catch
                 const { correct, wrong, total } = checkRadioAnswers(module);
                 
-                // Mesmo se total for 0, continua para showResult (pode ser um desafio sem perguntas válidas)
-                 // if (total === 0) {
-                 //      console.error(`submitChallengeRadio (M${module.id}): checkRadioAnswers encontrou 0 perguntas válidas.`);
-                 //      // Considera mostrar um erro ou apenas avançar sem pontuar
-                 // }
-
                 let points = 0; 
                 // Calcula pontos apenas se houver perguntas
                  if (total > 0) {
@@ -1433,7 +1454,9 @@
 
                 
                 ui.submitChallengeBtn.classList.add('hidden');
-                const message = total > 0 ? `Você acertou ${correct} de ${total}.` : "Nenhuma pergunta encontrada neste desafio.";
+                // Mensagem de feedback melhorada
+                const message = total > 0 ? `Você acertou ${correct} de ${total}!` : "Desafio concluído. (Nenhuma pergunta encontrada para pontuar)";
+                 
                  // Continua para a tela de resultado
                 setTimeout(() => showResult(true, message), 4000); 
              } catch (error) {
@@ -1523,7 +1546,7 @@
                 }
             }
             // Bloqueia Ctrl+C
-             if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) { // Captura 'c' minúsculo e maiúsculo
+             if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) { // Captura 'c' minúsculo e maiúsculo
                 e.preventDefault();
                 handleCheat();
             }
@@ -1549,6 +1572,4 @@
     </script>
 </body>
 </html>
-
-
 
