@@ -346,7 +346,7 @@
                             </li>
                         </ul>
                     `,
-                    challengeTitle: "Desafio 2: Caça aos Desperdícios",
+                    challengeTitle: "Desafio 2: Caça aos Desperdícios", // Este título não continha "Pizzaria", causando o erro
                     challengeTask: "Você tem dois desafios! Primeiro, na Pizzaria. Depois, em um Festival de Música. Classifique cada problema com seu 'Muda' (Desperdício) correspondente.",
                     challengeData: { // Dados específicos do Desafio 2
                         pizzaria: [
@@ -972,21 +972,32 @@
          * Desafio 2: Os 7 Desperdícios (Genérico)
          */
         function setupChallenge2(module) {
-            const isPizzaria = module.challengeTitle.includes("Pizzaria");
+            // [CORREÇÃO DEFINITIVA]
+            // Verifica a jornada ativa pelo Título da Jornada (definido em startGame/startLevel2),
+            // pois o challengeTitle do M2 da Pizzaria não continha "Pizzaria" e causava o erro.
+            const isPizzaria = ui.journeyTitle.textContent.includes("Pizzaria");
+            
             let allQuestions = [];
             
-            if (isPizzaria) {
-                // [CORREÇÃO] Remove a cópia de array redundante [...]
+            if (isPizzaria) { 
+                // Nível 1 (Pizzaria)
+                // Adiciona verificação || [] para evitar erro se os dados não existirem
+                const pizzariaQuestions = module.challengeData.pizzaria || [];
+                const festivalQuestions = module.challengeData.festival || [];
+
                 allQuestions = [
-                    ...shuffleArray(module.challengeData.pizzaria).map(q => ({...q, context: "Na Pizzaria:"})),
-                    ...shuffleArray(module.challengeData.festival).map(q => ({...q, context: "No Festival:"}))
+                    ...shuffleArray(pizzariaQuestions).map(q => ({...q, context: "Na Pizzaria:"})),
+                    ...shuffleArray(festivalQuestions).map(q => ({...q, context: "No Festival:"}))
                 ];
-            } else {
-                allQuestions = shuffleArray(module.challengeData.oficina).map(q => ({...q, context: "Na Oficina:"}));
+            } else { 
+                // Nível 2 (Oficina)
+                // Adiciona verificação || []
+                const oficinaQuestions = module.challengeData.oficina || [];
+                allQuestions = shuffleArray(oficinaQuestions).map(q => ({...q, context: "Na Oficina:"}));
             }
             
-            // [CORREÇÃO] Remove a cópia de array redundante [...]
-            const tiposMuda = shuffleArray(module.challengeData.tiposMuda);
+            // Adiciona verificação || []
+            const tiposMuda = shuffleArray(module.challengeData.tiposMuda || []);
 
             allQuestions.forEach((item, index) => {
                 const questionEl = document.createElement('div');
@@ -1089,7 +1100,8 @@
             ui.challengeArea.innerHTML = '';
             ui.challengeFeedback.textContent = '';
             ui.submitChallengeBtn.classList.remove('hidden');
-            const isPizzaria = module.challengeTitle.includes("Pizzaria");
+            // Esta lógica funciona pois os títulos do M4 estão corretos
+            const isPizzaria = module.challengeTitle.includes("Pizzaria"); 
 
             if (step === 1) { // Etapa 1: Kanban
                 ui.challengeTask.textContent = "Etapa 1: KANBAN (Gestão Visual).";
@@ -1417,3 +1429,4 @@
     </script>
 </body>
 </html>
+
